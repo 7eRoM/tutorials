@@ -1,8 +1,17 @@
 # Exploring Cryptography Protocols
 
 * Chapter 1: Identification and Entity Authentications Protocols
+  * Weak Authentication (based on password)
+  * Strong Authentication (based on challenge and response)
+
 * Chapter 2: Zero Knowledge Protocols
+  * Extremely Strong Authentication (based on zero knowledge)
+    
 * Chapter 3: Key Establishment Protocols
+  * Key Predistribution Schemes
+  * Session Key Distribution
+  * Key Agreement
+
 * Chapter 4: Threshold Cryptography and Secret Sharing Protocols
 * Chapter 5: Types of Digital Signatures
 * Chapter 6: Special Purpose Protocols (like simultaneous contract signing, mental poker, fair exchange)
