@@ -20,11 +20,9 @@
   * Key Escrow Systems
   * Proactive Secret Sharing  
     
-* **Chapter 5: Types of Digital Signatures**
-* **Chapter 6: Special Purpose Protocols (like simultaneous contract signing, mental poker, fair exchange)**
-* **Chapter 7: Identity Based Cryptography**
-* **Chapter 8: Secure Auctions and Elections Protocols**
-* **Chapter 9: Cryptocurrency**
-* **Chapter 10: Secure Multiparty Computations**
+* **Chapter 5: Special Purpose Protocols (like simultaneous contract signing, mental poker, fair exchange)**
+* **Chapter 6: Identity Based Cryptography**
+* **Chapter 7: Types of Digital Signatures**
+* **Chapter 8: Secure Multiparty Computations**
 
 Tutorial in progress. Stay tuned for upcoming chapters.
