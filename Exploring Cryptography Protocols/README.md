@@ -21,6 +21,16 @@
   * Proactive Secret Sharing  
     
 * **Chapter 5: Special Purpose Protocols (like simultaneous contract signing, mental poker, fair exchange)**
+  * Commitment
+  * Yes/No Election
+  * Fair Coin Flipping by the Phone
+  * Oblivious Transfer
+  * Simultaneous Contract Signing
+  * Certified Email
+  * Fair Exchange
+  * Mental Poker
+  * Dining Cryptographers
+
 * **Chapter 6: Identity Based Cryptography**
 * **Chapter 7: Types of Digital Signatures**
 * **Chapter 8: Secure Multiparty Computations**
