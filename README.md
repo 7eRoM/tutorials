@@ -14,6 +14,6 @@ No video
 ### Status
 Ongoing
 ### Slides 
-3 chapters
+5 chapters
 ### Video
 No video
