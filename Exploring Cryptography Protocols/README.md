@@ -32,6 +32,11 @@
   * Dining Cryptographers
 
 * **Chapter 6: Identity Based Cryptography**
+   * Introduction to ECC
+   * Boneh–Franklin Scheme
+   * Escrow Remove
+   * Key Agreement
+
 * **Chapter 7: Types of Digital Signatures**
 * **Chapter 8: Secure Multiparty Computations**
 
