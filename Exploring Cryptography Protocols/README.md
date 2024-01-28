@@ -38,6 +38,15 @@
    * Key Agreement
 
 * **Chapter 7: Types of Digital Signatures**
+    * Blind Signature
+    * Fail-Stop Signature
+    * Undeniable Signature
+    * Ring Signature
+
+
+
+
+
 * **Chapter 8: Secure Multiparty Computations**
 
 Tutorial in progress. Stay tuned for upcoming chapters.
