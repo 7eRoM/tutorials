@@ -43,10 +43,10 @@
     * Undeniable Signature
     * Ring Signature
 
-
-
-
-
 * **Chapter 8: Secure Multiparty Computations**
-
-Tutorial in progress. Stay tuned for upcoming chapters.
+    * Yao’s Garbled Circuit
+    * Median
+    * kth Element
+    * Greater Than
+    * Private Set Intersection
+    * Private Bidding
