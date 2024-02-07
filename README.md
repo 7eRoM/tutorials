@@ -8,6 +8,6 @@ Here are the resources of my published tutorials.
 * **Videos**: No video
 
 ## Exploring Cryptography Protocols
-* **Status**: Ongoing
+* **Status**: Finished
 * **Slides**: 8 Chapters
 * **Videos**: No video
