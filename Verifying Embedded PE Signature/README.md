@@ -573,7 +573,8 @@ IssuerAndSerialNumber ::= SEQUENCE {
 }
     
 Name ::= CHOICE { -- only one possibility for now --
-    rdnSequence  RDNSequence }
+    rdnSequence  RDNSequence 
+}
 
 RDNSequence ::= SEQUENCE OF RelativeDistinguishedName
 
@@ -582,7 +583,8 @@ RelativeDistinguishedName ::=
 
 AttributeTypeAndValue ::= SEQUENCE {
     type     AttributeType,
-    value    AttributeValue }
+    value    AttributeValue 
+}
 
 AttributeType ::= OBJECT IDENTIFIER
 
