@@ -382,7 +382,7 @@ The most important and the only field we delve into here is `TBSCertificate`. It
 
 ### version
 
-```
+```ASN.1
 Version  ::=  INTEGER  {  v1(0), v2(1), v3(2)  }
 ```
 
@@ -392,7 +392,7 @@ It contains a *[0] EXPLICIT* tag of *INTEGER* with size of 1 bytes from offset 0
 
 ### serialNumber
 
-```
+```ASN.1
 CertificateSerialNumber  ::=  INTEGER
 ```
 
@@ -407,7 +407,7 @@ Here, the serial number of the first certificate is:
 
 ### signature
 
-```
+```ASN.1
 AlgorithmIdentifier  ::=  SEQUENCE  {
     algorithm               OBJECT IDENTIFIER,
     parameters              ANY DEFINED BY algorithm OPTIONAL  
@@ -438,7 +438,7 @@ It contains a *SEQUENCE* with size of *0x74* bytes from offset *0x15E* to offset
 
 ### subjectPublicKeyInfo
 
-```
+```ASN.1
 SubjectPublicKeyInfo  ::=  SEQUENCE  {
     algorithm            AlgorithmIdentifier,
     subjectPublicKey     BIT STRING  
@@ -485,7 +485,7 @@ Now, it is time to talk about `subjectPublicKey`. It is a *BIT STRING* with size
 
 ### issuerUniqueID
 
-```
+```ASN.1
 UniqueIdentifier  ::=  BIT STRING
 ```
 
@@ -493,7 +493,7 @@ This field starts with byte *0xA1* indicates *[1] IMPLICIT*. The byte at offset 
 
 ### subjectUniqueID
 
-```
+```ASN.1
 UniqueIdentifier  ::=  BIT STRING
 ```
 
@@ -540,7 +540,7 @@ It is another *OPTIONAL* tag of *SignedData* which starts with byte *0xA1* indic
 
 ## signerInfos
 
-```
+```ASN.1
 SignerInfos ::= SET OF SignerInfo
 
 SignerInfo ::= SEQUENCE {
@@ -566,7 +566,7 @@ It contains an *INTEGER* with size of 1 bytes from offset *0xE16* to offset *0xE
 
 ### Parsing issuerAndSerialNumber
 
-```
+```ASN.1
 IssuerAndSerialNumber ::= SEQUENCE {
     issuer Name,
     serialNumber CertificateSerialNumber 
@@ -608,7 +608,7 @@ Remember!? The first certificate we have parsed had the same serial number (If y
 
 ### Parsing digestAlgorithm
 
-```
+```ASN.1
 DigestAlgorithmIdentifier ::= AlgorithmIdentifier
 
 AlgorithmIdentifier  ::=  SEQUENCE  {
