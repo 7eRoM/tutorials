@@ -652,5 +652,402 @@ Calculating hash of `authenticatedAttributes`:
 
 # Appendix B: A Brief Introduction to ASN.1
 
+ASN.1 (Abstract Syntax Notation One) is a standardized language used to describe data structures for representing, encoding, transmitting, and decoding data. It is widely used in telecommunications, cryptography, and networking protocols for defining complex data types in a platform-independent way.
+
+Here are some most used data types (or tags): `BOOLEAN`, `INTEGER`, `BIT STRING`, `OCTET STRING`, `NULL`, `OBJECT IDENTIFIER`, `SEQUENCE` and `SET`.
+
+Some examples are provided:
+
+```ASN.1
+Age ::= INTEGER
+```
+
+```ASN.1
+MySequence ::= SEQUENCE {
+    flag    BOOLEAN,
+    number  INTEGER
+}
+```
+
+```ASN.1
+ Product ::= SEQUENCE {
+    productId    INTEGER,
+    productName  UTF8String,
+    price        REAL
+}
+```
+
+## DER Encoding Rules
+
+DER encoding follows an encoding rules, ensuring a single, unambiguous encoding for each ASN.1 data structure. DER encoding is typically represented using Tag-Length-Value (TLV) triplets.
+Components of DER Encoding
+
++------+-------+-------+
+
+| Tag | Length | Value |
+
++------+-------+-------+
+
+- **Tag**: Indicates the data type and class.
+- **Length**: Specifies the length of the value in bytes.
+- **Value**: The actual data content.
+
+### BOOLEAN
+
+Represents a boolean value, either `TRUE` or `FALSE`. In DER, `FALSE` is encoded as `0x00`, and `TRUE` is encoded as any non-zero value, typically `0xFF`.
+
+Example:
+
+```ASN.1
+isActive BOOLEAN ::= TRUE
+```
+
+DER Encoding:
+```
+01 01 FF
+```
+
+<details>
+  <summary>Details</summary>
+
+```
+Tag:        0x01
+Length:     0x01
+Content:    0xFF
+```
+</details>
+
+### INTEGER
+
+Represents whole numbers. The INTEGER type can encode positive and negative values. DER requires the smallest possible number of octets to represent the value, and for negative numbers, it uses two's complement.
+
+Example:
+```ASN.1
+age INTEGER ::= 25
+```
+
+DER Encoding:
+```
+02 01 19
+```
+
+<details>
+  <summary>Details</summary>
+
+```
+Tag:        0x02
+Length:     0x01
+Content:    0x19
+```
+</details>
+
+### BIT STRING
+
+Represents a string of bits. The first byte indicates the number of unused bits in the final octet. DER requires the minimal number of octets, and the unused bits must be zero.
+
+Example:
+```ASN.1
+flags BIT STRING ::= '10110010'B
+```
+
+DER Encoding:
+```
+03 02 00 B2
+```
+
+<details>
+  <summary>Details</summary>
+
+```
+Tag:        0x03
+Length:     0x02
+Content:    0x00 0xB2
+```
+</details>
+
+### OCTET STRING
+
+Represents a sequence of octets (bytes). It is commonly used to hold binary data.
+
+Example:
+```ASN.1
+data OCTET STRING ::= 'Hello'H
+```
+
+DER Encoding:
+```
+04 05 48 65 6C 6C 6F
+```
+
+<details>
+  <summary>Details</summary>
+
+```
+Tag:        0x04
+Length:     0x05
+Content:    48 65 6C 6C 6F ('H' 'e' 'l' 'l' 'o' in ASCII)
+```
+</details>
+
+### NULL
+
+Represents a NULL value. It has no content; the length is always zero.
+
+Example:
+```ASN.1
+placeholder NULL ::= NULL
+```
+
+DER Encoding:
+```
+05 00
+```
+
+<details>
+  <summary>Details</summary>
+
+```
+Tag:        0x05
+Length:     0x00
+Content:    (none)
+```
+</details>
+
+
+### OBJECT IDENTIFIER
+
+Represents an object identifier, which is a globally unique identifier used in many standards (e.g., OIDs in certificates). It consists of a series of integers separated by dots.
+
+Example:
+```ASN.1
+idExample OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) example(113549) 1 }
+```
+
+DER Encoding:
+```
+06 07 2A 86 48 86 F7 0D 01
+```
+
+<details>
+  <summary>Details</summary>
+
+```
+Tag:        0x06
+Length:     0x07
+Content:    2A 86 48 86 F7 0D 01
+```
+
+*Explanation:*
+
+The first two numbers `1.2` are encoded as `40 * 1 + 2 = 42` which is `0x2A`.
+The subsequent numbers are encoded in base 128 with the high bit set for all but the last byte in each sub-identifier.
+</details>
+
+
+
+### SEQUENCE
+
+Represents a sequence of ordered elements, similar to a struct in programming languages. It is a constructed type, meaning it contains other ASN.1 types.
+
+Example:
+```ASN.1
+Person SEQUENCE ::= {
+    name    OCTET STRING,
+    age     INTEGER,
+    isActive BOOLEAN
+}
+
+-- Example Instance:
+name    = "Alice"
+age     = 30
+isActive = TRUE
+```
+
+DER Encoding:
+```
+30 0D 04 05 41 6C 69 63 65 02 01 1E 01 01 FF
+```
+
+<details>
+  <summary>Details</summary>
+
+```
+Tag:        0x30 (SEQUENCE)
+Length:     Variable
+Content:
+    -- name OCTET STRING
+    04 05 41 6C 69 63 65
+    -- age INTEGER
+    02 01 1E
+    -- isActive BOOLEAN
+    01 01 FF
+```
+</details>
+
+### SET
+
+Represents an unordered collection of elements. Like SEQUENCE, it is a constructed type but does not preserve the order of elements. DER requires that the elements within a SET are encoded in ascending order based on their tag values.
+
+Example:
+```ASN.1
+Attributes SET ::= {
+    height INTEGER,
+    weight INTEGER
+}
+
+-- Example Instance:
+height = 170
+weight = 65
+```
+
+DER Encoding:
+```
+31 06 02 02 00 AA 02 01 41
+```
+
+<details>
+  <summary>Details</summary>
+
+```
+Tag:        0x31 (SET)
+Length:     Variable
+Content:
+    -- height INTEGER
+    02 02 00 AA (170 in hex is 0x00AA to ensure positive)
+    -- weight INTEGER
+    02 01 41 (65 in hex is 0x41)
+```
+</details>
+
+### SEQUENCE OF
+
+ - `SEQUENCE OF` represents an ordered collection of elements, where the order of elements matters and is preserved in the encoding.
+ - The type of all elements within the sequence must be the same.
+
+Example:
+```ASN.1
+Grades SEQUENCE OF INTEGER ::= {85, 90, 75}
+```
+
+DER Encoding:
+```
+30 09 02 01 55 02 01 5A 02 01 4B
+```
+
+<details>
+  <summary>Details</summary>
+
+```
+Tag:        0x30 (SEQUENCE)
+Length:     0x09
+Content:
+    -- First INTEGER (85)
+    02 01 55
+    -- Second INTEGER (90)
+    02 01 5A
+    -- Third INTEGER (75)
+    02 01 4B
+```
+</details>
+
+### SET OF
+
+ - `SET OF` represents an unordered collection of elements. The order does not matter, but in DER, elements must be encoded in ascending order of their tags or content when tags are the same.
+ - Like `SEQUENCE OF`, all elements must be of the same type.
+
+Example:
+```ASN.1
+UniqueIds SET OF INTEGER ::= {5, 100, 20}
+```
+
+DER Encoding:
+```
+31 07 02 01 05 02 01 14 02 01 64
+```
+
+<details>
+  <summary>Details</summary>
+
+```
+Tag:        0x31 (SET)
+Length:     0x07
+Content:
+    -- First INTEGER (5)
+    02 01 05
+    -- Second INTEGER (20)
+    02 01 14
+    -- Third INTEGER (100)
+    02 01 64
+```
+</details>
+
+### EXPLICIT TAG
+
+Suppose:
+```ASN.1
+PersonInfo ::= SEQUENCE {
+    age        INTEGER OPTIONAL,
+    idNumber   INTEGER OPTIONAL
+}
+```
+
+Both fields are optional. Imagine `PersonInfo` in two conditions in which consists just one field.
+
+DER encoding when `PersonInfo` only consists of `age` with value of `7`:        `30 04 03 01 07`
+
+DER encoding when `PersonInfo` only consists of `idNumber` with value of `7`:   `30 04 03 01 07`
+
+Both encoding are same. How can we ditiguish between them in decoding? The solution is using `EXPLICIT` or `IMPLICIT`. Here, we only cover `EXPLICIT`.
+
+```ASN.1
+PersonInfo ::= SEQUENCE {
+    age        [0] EXPLICIT INTEGER OPTIONAL,
+    idNumber   [1] EXPLICIT INTEGER OPTIONAL
+}
+```
+
+EXPLICIT tags are used to differentiate between them. The EXPLICIT tag wraps the base type (INTEGER) with an additional tag to distinguish one field from the other.
+
+**Case 1:** Only `age` is present
+
+```ASN.1
+PersonInfo ::= {
+    age = 0x07
+}
+```
+
+```
+30 05 A0 03 02 01 07
+```
+
+`A0` indicates the `age` field with `EXPLICIT` tag `[0]`. 
+
+**Case 2:** Only `idNumber` is present
+
+```ASN.1
+PersonInfo ::= {
+    idNumber = 0x07
+}
+```
+
+```
+30 05 A1 03 02 01 07
+```
+
+`A1` indicates the `idNumber` field with `EXPLICIT` tag `[1]`.
+
+**Case 3:** Both `age` and `idNumber` are present
+
+```ASN.1
+PersonInfo ::= {
+    age = 0x07,
+    idNumber = 0x07
+}
+```
+
+```
+30 0B A0 03 02 01 07 A1 03 02 02 07
+```
+
 # Appendix C: Most Important Fields
 
