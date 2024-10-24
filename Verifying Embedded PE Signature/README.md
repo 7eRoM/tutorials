@@ -25,6 +25,9 @@ For a given signed PE file, with the signature embedded, we extract the signatur
 # Links
  - Parsing ASN.1: https://pkitools.net/pages/ca/asn1.html
  - Calculating hash from hex sequence: https://emn178.github.io/online-tools/
+ - ASN.1 tutorial: https://obj-sys.com/asn1tutorial/asn1only.html
+ - ASN.1 and DER tutorial: https://learn.microsoft.com/en-us/windows/win32/seccertenroll/distinguished-encoding-rules
+ - ASN.1 and DER tutorial: https://luca.ntop.org/Teaching/Appunti/asn1.html
 
 # Table of Contents
 
@@ -480,7 +483,7 @@ Let's back to the analysis of the binary. The first field of *SubjectPublicKeyIn
 
 In our sample file, there is a *SEQUENCE* with size of *0x0D* bytes from offset *0x1D8* to offset *0x1E6*. As mentioned, it is the *SEQUENCE* of *algorithm*. The value of encryption algorithm is specified in offset *0x1DA* to offset *0x1E4* which express `rsaEncryption`. And its parameters is specified in offset *0x1E5* to offset *0x1E6* which is null.
 
-Now, it is time to talk about `subjectPublicKey`. It is a *BIT STRING* with size of *0x10F* bytes from offset *0x1E7* to offset *0x2F9*. That is the public key we use in signature verification. But it is not in the format we can use. First we must reformat the bytes representation to use in bcrypt functions. To see how, refer to appendix. 
+Now, it is time to talk about `subjectPublicKey`. It is a *BIT STRING* with size of *0x10F* bytes from offset *0x1E7* to offset *0x2F9*. That is the public key we use in signature verification.
 
 Here is the public key:
 
@@ -972,6 +975,17 @@ Components of DER Encoding
 - **Length**: Specifies the length of the value in bytes.
 - **Value**: The actual data content.
 
+TAG | Byte
+--- | ---
+BOOLEAN | 0x01
+INTEGER | 0x02
+BIT STRING | 0x03
+OCTET STRING | 0x04
+NULL | 0x05
+OBJECT IDENTIFIER | 0x06
+SEQUENCE and SEQUENCE OF| 0x30
+SET and SET OF | 0x31
+
 ### BOOLEAN
 
 Represents a boolean value, either `TRUE` or `FALSE`. In DER, `FALSE` is encoded as `0x00`, and `TRUE` is encoded as any non-zero value, typically `0xFF`.
@@ -1023,7 +1037,7 @@ Content:    0x19
 
 ### BIT STRING
 
-Represents a string of bits. The first byte indicates the number of unused bits in the final octet. DER requires the minimal number of octets, and the unused bits must be zero.
+Represents a string of bits. The first byte indicates the number of unused bits in the final octet.
 
 Example:
 ```ASN.1
@@ -1093,7 +1107,6 @@ Content:    (none)
 ```
 </details>
 
-
 ### OBJECT IDENTIFIER
 
 Represents an object identifier, which is a globally unique identifier used in many standards (e.g., OIDs in certificates). It consists of a series of integers separated by dots.
@@ -1122,8 +1135,6 @@ Content:    2A 86 48 86 F7 0D 01
 The first two numbers `1.2` are encoded as `40 * 1 + 2 = 42` which is `0x2A`.
 The subsequent numbers are encoded in base 128 with the high bit set for all but the last byte in each sub-identifier.
 </details>
-
-
 
 ### SEQUENCE
 
@@ -1331,3 +1342,16 @@ PersonInfo ::= {
 
 # Appendix C: Most Important Fields
 
+Field | usage
+--- | ---
+SignedData - contentInfo | Digest of this field will be used in authenticatedAttributes
+SignedData - contentInfo - digestAlgorithm | Specifies the algorithm the hash of PE image file is calculated by
+SignedData - contentInfo - digest | Contains digest of PE image file
+SignedData - Certificate - Certificate | Hash of this field is the thumbprint of the certificate
+SignedData - Certificate - TBSCertificate - serialNumber | Serial number of the certificate
+SignedData - Certificate - TBSCertificate - subjectPublicKeyInfo | Encryption algorithm and its parameters along with public key
+SignedData - SignerInfo - issuerAndSerialNumber | Certificate serial number of the signer of the PE
+SignedData - SignerInfo - digestAlgorithm | Specifies the algorithm the hash of authenticatedAttributes is calculated by
+SignedData - SignerInfo - authenticatedAttributes | The message the signature will be verified by
+SignedData - SignerInfo - digestEncryptionAlgorithm | Specifies the algorithm authenticatedAttributes is signed by
+SignedData - SignerInfo - encryptedDigest | Signature
