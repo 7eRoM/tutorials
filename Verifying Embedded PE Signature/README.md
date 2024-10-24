@@ -38,52 +38,49 @@ For a given signed PE file, with the signature embedded, we extract the signatur
 - Parsing ContentInfo
 - Parsing Certificates
 - Parsing SignInfo
-- Appendix A: PE Authenticode Hash
+- Appendix A: Calculating the PE Image Hash
 - Appendix B: A Brief Introduction to ASN.1
-- Appendix C: Most Important Fields
-- Appendix D: Converting a DER public key to CNG blob
-
+- Appendix C: Most Important Fields of PKCS7
 
 # Introduction
 
 PE files are digitally signed to verify various aspects, such as identifying the publisher of the file and ensuring the file's integrity has not been compromised. In this write-up, we will not explain why PE files are signed, but we will delve into how they are signed and how we can verify their signatures.
 
-**NOTE:** Be too patient. This document has lots of terms and confusing relation between them, ambgious names, and working with bytes and binary. So it might be reuqired to review the docuemnt more than one.
-
+*Note: Please be very patient. This document contains numerous terms with complex relationships, ambiguous names, and involves working with bytes and binary data. Therefore, it may require multiple reviews to fully understand.*
 
 ## Digital Signature
 
 We provide a sample in the *sample* directory, which contains a file named *dbgview64.exe*. We perform all verification operations on this sample PE file.
 
-In the properties of this PE, we can view the *Digital Signatures* tab.
+In the properties of this PE file, you can view the *Digital Signatures* tab.
 
 ![Digital Signatures](Images/DigitalSignatures.JPG)
 
-This tab contains almost all the information we need for verification. If we go to *Details*, the information about the signature is displayed.
+This tab contains almost all the information required for verification. By clicking on *Details*, you can view the signature information.
 
 ![Signature Details](Images/SignatureDetails.JPG)
 
-You can see many *fields*—some you may understand, some you may not, and some you might misunderstand. Misunderstand!? Yes, by the end of this write-up, you'll find out!
+You can see many *fields*—some you may understand, some you may not, and some you might misunderstand. Misunderstand!? Yes, by the end of this write-up, you'll see why!
 
-Next, we go to the *General* tab to view the certificate that signed this PE file and the hierarchy of the certifications.
+Next, go to the General tab to view the *certificate* that signed this PE file, as well as the certification hierarchy.
 
 ![General Details](Images/GeneralDetails.JPG)
 
-If we click on *View Certificate* and then go to the *Details* tab, we can find all the information about the signer's certificate for this PE file.
+By clicking on *View Certificate* and navigating to the *Details* tab, you can find all the information about the signer's certificate for this PE file.
 
 ![Certification Details](Images/CertificationDetails.JPG)
 
-Some fields are not part of the certificate and can only be found in the GUI. Unfortunately (!), one of them is the *Thumbprint*, which is calculated every time you open this dialog. Therefore, we must calculate it manually. We discuss this later.
+However, some fields are not part of the certificate and can only be viewed in the GUI. Unfortunately (1), one of these is the *Thumbprint*, which is recalculated every time you open this dialog. As a result, we need to calculate it manually, which will be explained later.
 
 ![Thumbprint Details](Images/ThumbprintDetails.JPG)
 
-In the *Certification Path* tab, we can find the chain of certifications. To view the details of each certificate, you can click *View Certificate* as before.
+In the *Certification Path* tab, you can see the chain of certifications. To view the details of each certificate, simply click *View Certificate* as you did before.
 
 ![Certification Chain Details](Images/CertificationChainDetails.JPG)
 
-However, for some PEs, like *C:\Windows\System32\notepad.exe*, the *Digital Signatures* tab does not exist. What does this mean? It means that Notepad is not signed!
+However, for some PE files, such as *C:\Windows\System32\notepad.exe*, the Digital Signatures tab is missing. What does this mean? It indicates that Notepad is not signed!?
 
-Let's check with *signtool.exe*:
+Let’s verify this using *signtool.exe*:
 
 ```shell
 C:\>signtool.exe verify /a /v C:\Windows\System32\notepad.exe
@@ -132,33 +129,33 @@ Number of warnings: 0
 Number of errors: 0
 ```
 
-The signature is verified! Which signature?
+The signature is verified! But which signature?
 
-Don't be confused! Windows stores the signatures of some PE files in the *CatRoot* database (located in `C:\Windows\System32`). Many System32 PE files have their signatures residing in this database. In this write-up, we will not discuss catalog files and how to parse them. Therefore, discussing PE files whose signatures are not embedded within their files is out of our scope.
+Don’t be confused! Windows stores the signatures of some PE files in the *CatRoot* database (located in `C:\Windows\System32`). Many PE files in the System32 folder have their signatures stored in this database. In this write-up, we won’t be discussing catalog files or how to parse them, so any PE files whose signatures are not embedded within the file itself are beyond our scope.
 
 # Parsing PE
 
-Open *dbgview64.exe* with *CFF Explorer*. In the `Optional Header`, there is a data directory named `Security Directory` (also known as the `Certification Table`).
+Let’s open *dbgview64.exe* using *CFF Explorer*. In the `Optional Header`, there is a data directory named the `Security Directory` (also referred to as the `Certification Table`).
 
 ![Security Directory](Images/SecurityDirectory.JPG)
 
-Also, you can find the `Security Directory`  using *PE Bear* in `Security` tab.
+You can also locate the `Security Directory` using *PE Bear* in the `Security` tab.
 
 ![PE-Bear Security Directory File Offset](Images/PEBearSecurityDirectory.jpg)
 
-This section shows where the embedded digital signature is located and determines its size. For our sample file, it resides at offset `0x10B400` from the beginning of the file with a size of `0x2378`.
+This section indicates where the embedded digital signature is stored and its size. In our sample file, it starts at offset `0x10B400` from the beginning of the file and has a size of `0x2378`.
 
 ![Security Directory File Offset](Images/SecurityDirectoryFileOffset.JPG)
 
-If you look at the decoded text, you can find meaningful words like *Microsoft Corporation*, *Redmond*, *Washington*, etc. It seems we are in the right place.
+When examining the decoded text, you’ll find recognizable terms like *Microsoft Corporation*, *Redmond*, *Washington*, and others. This suggests we’re in the right place.
 
-How can we decode the bytes to accomplish our mission? To decode it, we must be familiar with `WIN_CERTIFICATE`.
+But how do we decode these bytes to achieve our goal? To do so, we need to become familiar with the `WIN_CERTIFICATE` structure.
 
-So, it's time to get our hands dirty!
+Now it’s time to roll up our sleeves and dive in!
 
 # Parsing WIN_CERTIFICATE
 
-All the bytes in the security directory must be interpreted as a `WIN_CERTIFICATE` structure, as shown below:
+All the bytes in the security directory must be interpreted as a `WIN_CERTIFICATE` structure, defined as follows:
 
 ```cpp
 typedef struct _WIN_CERTIFICATE {
@@ -169,15 +166,15 @@ typedef struct _WIN_CERTIFICATE {
 } WIN_CERTIFICATE, *LPWIN_CERTIFICATE;
 ```
 
- - **dwLength** (4 bytes): The length of the structure or security directory. As seen in the raw file, it is `23 78 00 00`.
- - **wRevision**: The revision number. Not important here.
- - **wCertificateType**: The certificate type we are working with is `WIN_CERT_TYPE_PKCS_SIGNED_DATA`. Therefore, we set the value of *wCertificateType* to `0x2`.
- - **bCertificate**: This is the most important field. Although the security directory may contain multiple `bCertificate` entries, we will assume there is only one for our purposes. The bCertificate field is not a specific structure itself; in digital signatures, it contains another structure named `PKCS7`.
+ - **dwLength** (4 bytes): The length of the structure or security directory. In the raw file, this is represented as `23 78 00 00`.
+ - **wRevision**: The revision number. This field is not critical for our purposes.
+ - **wCertificateType**: This specifies the type of certificate. For our case, the type is `WIN_CERT_TYPE_PKCS_SIGNED_DATA`, so wCertificateType is set to `0x2`.
+ - **bCertificate**: This is the key field. While the security directory could potentially contain multiple `bCertificate` entries, for simplicity, we’ll assume there’s only one. The bCertificate field is not a defined structure in itself; it contains another structure called `PKCS7`, which is crucial for digital signatures.
 
-For the simplicity, we dump the security directory as a single file named `security_directory.bin` and will work on it.
+For simplicity, we’ll dump the security directory into a single file named `security_directory.bin` and work with it from there.
 
 # PKCS #n
-There are multiple types of PKCS, each related to a specific function. Here is a list of PKCS types from [Wikipedia](https://en.wikipedia.org/wiki/PKCS):
+There are several types of PKCS, each serving a different cryptographic function. Here’s a list of PKCS types, sourced from [Wikipedia](https://en.wikipedia.org/wiki/PKCS):
 
 - PKCS #1: RSA Cryptography Standard
 - PKCS #2: *Withdrawn*
@@ -195,7 +192,7 @@ There are multiple types of PKCS, each related to a specific function. Here is a
 - PKCS #14: Pseudo-random Number Generation
 - PKCS #15: Cryptographic Token Information Format Standard
 
-For digital signatures, the main focus is on PKCS #7, but we will also indirectly discuss PKCS #1, PKCS #9, and PKCS #13.
+For digital signatures, our primary focus will be on PKCS #7, but we will also touch on PKCS #1, PKCS #9, and PKCS #13 in relation to signature processing.
 
 # Parsing PKCS #7
 
@@ -657,7 +654,7 @@ The final message is:
 
 Congrats! It's the message must be used when you want to verify the signature. But where is the signature!? Keep it up!
 
-Note: Based on the specified algorithm in previous section, we calculating `SHA-256` over the modified `authenticatedAttributes` field and the result is: `79007003e5756941bb23b36e2e599782277c22cb27b409497425be8e75637379`. Actually, calculating the hash is not mandatory. If you decrypt the signature (which we will reach to it next sub-sections) you can find this hash.
+*Note: Based on the specified algorithm in previous section, we calculating `SHA-256` over the modified `authenticatedAttributes` field and the result is: `79007003e5756941bb23b36e2e599782277c22cb27b409497425be8e75637379`. Actually, calculating the hash is not mandatory. If you decrypt the signature (which we will reach to it next sub-sections) you can find this hash.*
 
 ### Parsing digestEncryptionAlgorithm
 
@@ -873,7 +870,7 @@ As brief, you must do following rules in order to create a buffer which is used 
 
 Creating digest over the above buffer to get the PE image file hash.
 
-Note: In microsoft document, there is an extra rule specifies the section must be inserted in the buffer in ascending order based on the their PointerToRawData. I'm not sure! If you have more information plz share with me.
+*Note: In microsoft document, there is an extra rule specifies the section must be inserted in the buffer in ascending order based on the their PointerToRawData. I'm not sure! If you have more information plz share with me.*
 
 We provide a python code to do the above rules automatically for us:
 
@@ -963,6 +960,7 @@ MySequence ::= SEQUENCE {
 ## DER Encoding Rules
 
 DER encoding follows an encoding rules, ensuring a single, unambiguous encoding for each ASN.1 data structure. DER encoding is typically represented using Tag-Length-Value (TLV) triplets.
+
 Components of DER Encoding
 
 +------+-------+-------+
@@ -974,6 +972,8 @@ Components of DER Encoding
 - **Tag**: Indicates the data type and class.
 - **Length**: Specifies the length of the value in bytes.
 - **Value**: The actual data content.
+
+Here are some data types with their DER tag bytes:
 
 TAG | Byte
 --- | ---
@@ -1340,7 +1340,7 @@ PersonInfo ::= {
 30 0B A0 03 02 01 07 A1 03 02 02 07
 ```
 
-# Appendix C: Most Important Fields
+# Appendix C: Most Important Fields of PKCS7
 
 Field | usage
 --- | ---
