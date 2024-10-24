@@ -24,7 +24,7 @@ For a given signed PE file, with the signature embedded, we extract the signatur
 
 # Links
  - Parsing ASN.1: https://pkitools.net/pages/ca/asn1.html
- - Calculating hash from hex sequence: https://emn178.github.io/online-tools/sha1.html
+ - Calculating hash from hex sequence: https://emn178.github.io/online-tools/
 
 # Table of Contents
 
@@ -482,6 +482,10 @@ In our sample file, there is a *SEQUENCE* with size of *0x0D* bytes from offset 
 
 Now, it is time to talk about `subjectPublicKey`. It is a *BIT STRING* with size of *0x10F* bytes from offset *0x1E7* to offset *0x2F9*. That is the public key we use in signature verification. But it is not in the format we can use. First we must reformat the bytes representation to use in bcrypt functions. To see how, refer to appendix. 
 
+Here is the public key:
+
+`30 82 01 0A 02 82 01 01 00 CE B7 C9 0B 73 B3 F7 4F B3 0A 22 1A 2E 60 77 B0 30 59 A7 AB C0 32 BB B1 4E 85 90 90 69 B5 70 06 9D 95 4B 85 B2 07 64 1E E1 34 01 4F C6 81 CE 70 0D 0C 43 E3 1C A3 5D 3D 3F 17 CF 97 0D 6A 58 BA 5C 77 9F 4B C8 BF 59 7B 45 D2 F4 AC 3F C3 44 BF A9 81 1E E0 36 A7 57 F0 DB 00 7F 17 47 47 B0 9D C6 7D 9E 5C D2 C3 C9 8E 49 6C 89 8A 8F C3 9F 71 27 9E 24 33 DD 48 3A 08 8E D8 E5 33 8C D0 25 8C F8 9B 8C 25 9F 1F B5 33 43 54 CF 1D CE 1D C1 E8 A5 B3 C1 84 22 B6 C1 45 BE C8 5B 08 8E 6C BD 76 8D 64 F8 62 1E F5 35 08 2F 27 D1 67 EB E5 21 0F DC 76 BA 4D DD 2E 3F 38 BF 0B 75 36 E1 50 8A D2 89 C4 85 74 7D 5B 11 35 1D DA 6D 05 4E 2E AA 43 BA 06 EB D1 2C CD 2F AA 3C C7 33 87 2F 93 97 88 61 B0 83 A7 A4 89 70 35 FF 65 D7 63 BC 95 15 CD FD B6 57 9D 0E D6 63 4A 33 5B 7B 1D 73 CF 04 97 02 03 01 00 01`
+
 
 ### issuerUniqueID
 
@@ -506,7 +510,6 @@ This field starts with byte *0xA3* indicates *[3] EXPLICIT*. The bytes at offset
 It contains a *SEQUENCE* with size of 0x17A bytes from offset 0x2fE to offset 0x47B. We discard this field. 
 
 ![Certificates Extensions File Offset](Images/CertificatesExtensionsFileOffset.jpg)
-
 
 ## signatureAlgorithm
 
@@ -637,14 +640,212 @@ In our example, the hash algorithm is `SHA-256` and the parameters field is `NUL
 
 `authenticatedAttributes` consists of some of *SEQUENCE*s  Each *SEQUENCE* itself consists of two fields: an *OBJECT IDENTIFIER* and a *SET*. The most important *SEQUENCE* is the one with starts with OID `1.2.840.113549.1.9.4` which specifies `messageDigest`. In *SET* field of that, exist and *OCTET STRING* which specifies a value which is digest of *contentInfo*. The value must be same with the hash we calculated  berfore in *contentInfo* section.
 
-Here the value is `E2FEB6E31C9B40CF9C326922FFD690CB17ABDEA3E06F27766888CD36F4515785`. Please go back to the *contentInfo* section and checks is same :)
+Here the value is `E2FEB6E31C9B40CF9C326922FFD690CB17ABDEA3E06F27766888CD36F4515785`. Please go back to the *contentInfo* section and checks is same. 😁
 
+Here is the step three (and final step) of creating the message must be signed. This section contains `contentInfo` which itself contains PE image hash. So, calculating hash of `authenticatedAttributes` is a good choice for signing. But how?
 
-Calculating hash of `authenticatedAttributes`:
+`authenticatedAttributes` is a little bit tricky. According to RFC, the tag of this field must be change from `[0] IMPLICIT OPTIONAL` (`0xA0`) to `SET` (`0x31`) and then calculating the hash. So:
+
+`A0 81 AE ... 63 6F 6D` -> `31 81 AE ... 63 6F 6D`
+
+The final message is:
+
+`31 81 AE 30 19 06 09 2A 86 48 86 F7 0D 01 09 03 31 0C 06 0A 2B 06 01 04 01 82 37 02 01 04 30 1C 06 0A 2B 06 01 04 01 82 37 02 01 0B 31 0E 30 0C 06 0A 2B 06 01 04 01 82 37 02 01 15 30 2F 06 09 2A 86 48 86 F7 0D 01 09 04 31 22 04 20 E2 FE B6 E3 1C 9B 40 CF 9C 32 69 22 FF D6 90 CB 17 AB DE A3 E0 6F 27 76 68 88 CD 36 F4 51 57 85 30 42 06 0A 2B 06 01 04 01 82 37 02 01 0C 31 34 30 32 A0 10 80 0E 00 44 00 62 00 67 00 56 00 69 00 65 00 77 A1 1E 80 1C 68 74 74 70 73 3A 2F 2F 77 77 77 2E 73 79 73 69 6E 74 65 72 6E 61 6C 73 2E 63 6F 6D`
+
+Congrats! It's the message must be used when you want to verify the signature. But where is the signature!? Keep it up!
+
+Note: Based on the specified algorithm in previous section, we calculating `SHA-256` over the modified `authenticatedAttributes` field and the result is: `79007003e5756941bb23b36e2e599782277c22cb27b409497425be8e75637379`. Actually, calculating the hash is not mandatory. If you decrypt the signature (which we will reach to it next sub-sections) you can find this hash.
 
 ### Parsing digestEncryptionAlgorithm
 
+```ASN.1
+DigestEncryptionAlgorithmIdentifier ::= AlgorithmIdentifier
+
+AlgorithmIdentifier  ::=  SEQUENCE  {
+    algorithm               OBJECT IDENTIFIER,
+    parameters              ANY DEFINED BY algorithm OPTIONAL
+}
+```
+
+`digestEncryptionAlgorithm` is the field specifies the encryption algorithm the hash of modified `authenticatedAttributes` is encrypted by. It contains an *SEQUENCE* with size of *0x0D* bytes from offset *0xF71* to offset *0xF7F*. `digestAlgorithm` encompasses two fields `algorithm` and its parameters named `parameters`.
+
+![SignerInfo digestEncryptionAlgorithm File Offset](Images/SignerInfodigestEncryptionAlgorithmFileOffset.jpg)
+
+![SignerInfo digestEncryptionAlgorithm ASN Tree](Images/SignerInfodigestEncryptionAlgorithmASNTree.jpg)
+
+It consists of `algorithm` and its `parameters`. In our case the first one is **RSA** and the second one is **NULL**. We discussed about the object id of encryption algorithm before.
+
 ### Parsing encryptedDigest
+
+Here is final field we delve into. `encryptedDigest` is an `OCTET STRING` with size of *0x100* bytes from offset *0xF80* to offset *0x1083*. Here is its value:
+
+`CA A1 3F 31 AC D9 90 AA A7 B5 0E DA 79 0F 46 FB FB 22 93 F3 CB 8D D6 0B 6C 33 10 93 29 9E F8 E9 10 BE 2B AD 0E 1E 7D 42 88 49 2B 14 79 13 EC 13 13 85 25 17 C5 4F B6 96 F8 DC E3 9A 77 2E E3 D7 CF 8C 9B FC EE 31 61 3A 74 25 30 2F 5B E1 D1 98 BC F9 CA 3F F9 D0 5B AA 79 24 8A 95 3D 7F E7 93 A8 7B D9 FE 70 BC AA 9A 63 B2 3B 8F 59 1F 49 B4 F5 2A ED 9A B1 9F 94 98 FE E2 20 BD 35 A3 EF E9 A9 B3 CA 3D FF 41 89 E3 F0 AC 92 AF 52 F7 47 22 F8 01 AB 96 34 B9 AA 73 5F FA 60 C1 3B E9 C4 0C 91 5F FC 34 1F 14 79 27 B2 DC 00 DD 99 DB B9 4E A8 23 70 CF 1D C9 49 07 60 0E FA A0 E9 3E 32 45 81 87 65 C7 9B 11 2D 9D 8F A9 1A C0 55 13 27 82 33 1F F2 26 7A 00 22 61 75 34 08 13 80 1C 0D 74 80 89 D5 9B FB 72 13 97 52 78 98 71 35 35 01 B4 9A 65 5F DC CD E8 0F 50 03 66 0D 2A F1 A5 65 02`
+
+Ladies and Gentlemen, finally we reached to the signature! Here is the signature we must verify it against the digest we calculated in section `authenticatedAttributes`.
+
+### Parsing unauthenticatedAttributes
+
+From offset *0x1084* to the end of the file. Discarded!
+
+## Verifying the Signature
+
+Let's gather our information in one place here:
+
+message:
+
+`31 81 AE 30 19 06 09 2A 86 48 86 F7 0D 01 09 03 31 0C 06 0A 2B 06 01 04 01 82 37 02 01 04 30 1C 06 0A 2B 06 01 04 01 82 37 02 01 0B 31 0E 30 0C 06 0A 2B 06 01 04 01 82 37 02 01 15 30 2F 06 09 2A 86 48 86 F7 0D 01 09 04 31 22 04 20 E2 FE B6 E3 1C 9B 40 CF 9C 32 69 22 FF D6 90 CB 17 AB DE A3 E0 6F 27 76 68 88 CD 36 F4 51 57 85 30 42 06 0A 2B 06 01 04 01 82 37 02 01 0C 31 34 30 32 A0 10 80 0E 00 44 00 62 00 67 00 56 00 69 00 65 00 77 A1 1E 80 1C 68 74 74 70 73 3A 2F 2F 77 77 77 2E 73 79 73 69 6E 74 65 72 6E 61 6C 73 2E 63 6F 6D`
+
+signature:
+
+`CA A1 3F 31 AC D9 90 AA A7 B5 0E DA 79 0F 46 FB FB 22 93 F3 CB 8D D6 0B 6C 33 10 93 29 9E F8 E9 10 BE 2B AD 0E 1E 7D 42 88 49 2B 14 79 13 EC 13 13 85 25 17 C5 4F B6 96 F8 DC E3 9A 77 2E E3 D7 CF 8C 9B FC EE 31 61 3A 74 25 30 2F 5B E1 D1 98 BC F9 CA 3F F9 D0 5B AA 79 24 8A 95 3D 7F E7 93 A8 7B D9 FE 70 BC AA 9A 63 B2 3B 8F 59 1F 49 B4 F5 2A ED 9A B1 9F 94 98 FE E2 20 BD 35 A3 EF E9 A9 B3 CA 3D FF 41 89 E3 F0 AC 92 AF 52 F7 47 22 F8 01 AB 96 34 B9 AA 73 5F FA 60 C1 3B E9 C4 0C 91 5F FC 34 1F 14 79 27 B2 DC 00 DD 99 DB B9 4E A8 23 70 CF 1D C9 49 07 60 0E FA A0 E9 3E 32 45 81 87 65 C7 9B 11 2D 9D 8F A9 1A C0 55 13 27 82 33 1F F2 26 7A 00 22 61 75 34 08 13 80 1C 0D 74 80 89 D5 9B FB 72 13 97 52 78 98 71 35 35 01 B4 9A 65 5F DC CD E8 0F 50 03 66 0D 2A F1 A5 65 02`
+
+public key:
+
+`30 82 01 0A 02 82 01 01 00 CE B7 C9 0B 73 B3 F7 4F B3 0A 22 1A 2E 60 77 B0 30 59 A7 AB C0 32 BB B1 4E 85 90 90 69 B5 70 06 9D 95 4B 85 B2 07 64 1E E1 34 01 4F C6 81 CE 70 0D 0C 43 E3 1C A3 5D 3D 3F 17 CF 97 0D 6A 58 BA 5C 77 9F 4B C8 BF 59 7B 45 D2 F4 AC 3F C3 44 BF A9 81 1E E0 36 A7 57 F0 DB 00 7F 17 47 47 B0 9D C6 7D 9E 5C D2 C3 C9 8E 49 6C 89 8A 8F C3 9F 71 27 9E 24 33 DD 48 3A 08 8E D8 E5 33 8C D0 25 8C F8 9B 8C 25 9F 1F B5 33 43 54 CF 1D CE 1D C1 E8 A5 B3 C1 84 22 B6 C1 45 BE C8 5B 08 8E 6C BD 76 8D 64 F8 62 1E F5 35 08 2F 27 D1 67 EB E5 21 0F DC 76 BA 4D DD 2E 3F 38 BF 0B 75 36 E1 50 8A D2 89 C4 85 74 7D 5B 11 35 1D DA 6D 05 4E 2E AA 43 BA 06 EB D1 2C CD 2F AA 3C C7 33 87 2F 93 97 88 61 B0 83 A7 A4 89 70 35 FF 65 D7 63 BC 95 15 CD FD B6 57 9D 0E D6 63 4A 33 5B 7B 1D 73 CF 04 97 02 03 01 00 01`
+
+We provided a python code to verify the signature automatically:
+
+```py
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
+from Crypto.Hash import SHA256
+import binascii
+
+def verify_signature(public_key_hex, signature_hex, message_hex):
+    # Convert the hex strings back to bytes
+    public_key_bytes = binascii.unhexlify(public_key_hex)
+    signature_bytes = binascii.unhexlify(signature_hex)
+    message_bytes = binascii.unhexlify(message_hex)
+    
+    # Import the public key
+    public_key = RSA.import_key(public_key_bytes)
+    
+    # Create a SHA-256 hash object of the message
+    h = SHA256.new(message_bytes)
+    
+    # Create a PKCS1_v1_5 signature verifier
+    verifier = PKCS1_v1_5.new(public_key)
+    
+    # Verify the signature
+    if verifier.verify(h, signature_bytes):
+        return True
+    else:
+        return False
+
+message_hex = '3181AE301906092A864886F70D010903310C060A2B060104018237020104301C060A2B06010401823702010B310E300C060A2B060104018237020115302F06092A864886F70D01090431220420E2FEB6E31C9B40CF9C326922FFD690CB17ABDEA3E06F27766888CD36F45157853042060A2B06010401823702010C31343032A010800E0044006200670056006900650077A11E801C68747470733A2F2F7777772E737973696E7465726E616C732E636F6D'
+signature_hex = 'CAA13F31ACD990AAA7B50EDA790F46FBFB2293F3CB8DD60B6C331093299EF8E910BE2BAD0E1E7D4288492B147913EC1313852517C54FB696F8DCE39A772EE3D7CF8C9BFCEE31613A7425302F5BE1D198BCF9CA3FF9D05BAA79248A953D7FE793A87BD9FE70BCAA9A63B23B8F591F49B4F52AED9AB19F9498FEE220BD35A3EFE9A9B3CA3DFF4189E3F0AC92AF52F74722F801AB9634B9AA735FFA60C13BE9C40C915FFC341F147927B2DC00DD99DBB94EA82370CF1DC94907600EFAA0E93E3245818765C79B112D9D8FA91AC055132782331FF2267A00226175340813801C0D748089D59BFB72139752789871353501B49A655FDCCDE80F5003660D2AF1A56502'
+public_key_hex = '3082010A0282010100CEB7C90B73B3F74FB30A221A2E6077B03059A7ABC032BBB14E85909069B570069D954B85B207641EE134014FC681CE700D0C43E31CA35D3D3F17CF970D6A58BA5C779F4BC8BF597B45D2F4AC3FC344BFA9811EE036A757F0DB007F174747B09DC67D9E5CD2C3C98E496C898A8FC39F71279E2433DD483A088ED8E5338CD0258CF89B8C259F1FB5334354CF1DCE1DC1E8A5B3C18422B6C145BEC85B088E6CBD768D64F8621EF535082F27D167EBE5210FDC76BA4DDD2E3F38BF0B7536E1508AD289C485747D5B11351DDA6D054E2EAA43BA06EBD12CCD2FAA3CC733872F93978861B083A7A4897035FF65D763BC9515CDFDB6579D0ED6634A335B7B1D73CF04970203010001'
+
+# Verify the signature
+is_valid = verify_signature(public_key_hex, signature_hex, message_hex)
+print("Signature is valid:", is_valid)
+```
+
+As you guess, the result of executing the script is 
+```shell
+$ python3 signature_verification.py
+Signature is valid: True
+```
+
+Mission is accomplished! 😁 
+
+## Decrypting the Signature
+
+It's a little bit odd to decrypt the signature but we don't want to end this game. We provide a python code to decrypt the signature and get what was signed:
+
+```py
+from Crypto.PublicKey import RSA
+import binascii
+
+def decrypt_signature(public_key_hex, signature_hex):
+    # Convert the hex strings back to bytes
+    public_key_bytes = binascii.unhexlify(public_key_hex)
+    signature_bytes = binascii.unhexlify(signature_hex)
+    
+    # Import the public key
+    rsa_key = RSA.importKey(public_key_bytes)
+    
+    # Manually decrypt the signature by simulating the public key decrypt operation
+    modulus = rsa_key.n
+    modulus_len = rsa_key.size_in_bytes()
+
+    # Convert the signature into an integer
+    signature_int = int.from_bytes(signature_bytes, byteorder='big')
+
+    # Perform the RSA "decryption" (modular exponentiation)
+    recovered_plaintext_int = pow(signature_int, rsa_key.e, modulus)
+
+    # Convert the decrypted integer back to bytes
+    recovered_plaintext_bytes = recovered_plaintext_int.to_bytes(modulus_len, byteorder='big')
+
+    # Output the padded plaintext. You would need to strip the padding.
+    print("\nRecovered the plaintext (with padding)")
+    print(' '.join(f'{byte:02X}' for byte in recovered_plaintext_bytes))
+
+    # PKCS#1 v1.5 padding starts with 0x00 0x01 followed by padding bytes (0xFF), and then the plaintext.
+    # Remove the padding manually (look for the 0x00 separator)
+    padding_separator_index = recovered_plaintext_bytes.index(b'\x00', 2)  # First two bytes are 0x00 0x01
+    plaintext = recovered_plaintext_bytes[padding_separator_index+1:]
+
+    # Print the plaintext
+    print("\nRecovered the plaintext")
+    print(' '.join(f'{byte:02X}' for byte in plaintext))    
+
+    
+# Decrypt the signature
+signature_hex = 'CAA13F31ACD990AAA7B50EDA790F46FBFB2293F3CB8DD60B6C331093299EF8E910BE2BAD0E1E7D4288492B147913EC1313852517C54FB696F8DCE39A772EE3D7CF8C9BFCEE31613A7425302F5BE1D198BCF9CA3FF9D05BAA79248A953D7FE793A87BD9FE70BCAA9A63B23B8F591F49B4F52AED9AB19F9498FEE220BD35A3EFE9A9B3CA3DFF4189E3F0AC92AF52F74722F801AB9634B9AA735FFA60C13BE9C40C915FFC341F147927B2DC00DD99DBB94EA82370CF1DC94907600EFAA0E93E3245818765C79B112D9D8FA91AC055132782331FF2267A00226175340813801C0D748089D59BFB72139752789871353501B49A655FDCCDE80F5003660D2AF1A56502'
+public_key_hex = '3082010A0282010100CEB7C90B73B3F74FB30A221A2E6077B03059A7ABC032BBB14E85909069B570069D954B85B207641EE134014FC681CE700D0C43E31CA35D3D3F17CF970D6A58BA5C779F4BC8BF597B45D2F4AC3FC344BFA9811EE036A757F0DB007F174747B09DC67D9E5CD2C3C98E496C898A8FC39F71279E2433DD483A088ED8E5338CD0258CF89B8C259F1FB5334354CF1DCE1DC1E8A5B3C18422B6C145BEC85B088E6CBD768D64F8621EF535082F27D167EBE5210FDC76BA4DDD2E3F38BF0B7536E1508AD289C485747D5B11351DDA6D054E2EAA43BA06EBD12CCD2FAA3CC733872F93978861B083A7A4897035FF65D763BC9515CDFDB6579D0ED6634A335B7B1D73CF04970203010001'
+
+decrypt_signature(public_key_hex, signature_hex)
+```
+
+And the result is:
+
+```shell
+$ python3 signature_decryption.py
+
+Recovered the plaintext (with padding)
+00 01 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 00 30 31 30 0D 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20 79 00 70 03 E5 75 69 41 BB 23 B3 6E 2E 59 97 82 27 7C 22 CB 27 B4 09 49 74 25 BE 8E 75 63 73 79
+
+Recovered the plaintext
+30 31 30 0D 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20 79 00 70 03 E5 75 69 41 BB 23 B3 6E 2E 59 97 82 27 7C 22 CB 27 B4 09 49 74 25 BE 8E 75 63 73 79
+```
+
+By ignoring some details, we got a padded plaintext. According to [RFC of PKCS1-v1_5](https://www.rfc-editor.org/rfc/rfc8017#section-9.2), the recovered plaintext is based on this structure:
+
+```
+	EM = 0x00 || 0x01 || PS || 0x00 || T
+
+	M = Message to be encoded
+	H = Hash(M)
+
+	EM = Encoded Message
+	PS = An octet string with value 0xff
+	T  = DER encoding of:
+		 DigestInfo ::= SEQUENCE {
+			 digestAlgorithm AlgorithmIdentifier,
+			 digest OCTET STRING
+		 }
+
+		 All possible value of T per different hash algorithm:
+		 * MD2:         30 20 30 0c 06 08 2a 86 48 86 f7 0d 02 02 05 00 04 10 || H.
+		 * MD5:         30 20 30 0c 06 08 2a 86 48 86 f7 0d 02 05 05 00 04 10 || H.
+		 * SHA-1:       30 21 30 09 06 05 2b 0e 03 02 1a 05 00 04 14 || H.
+		 * SHA-224:     30 2d 30 0d 06 09 60 86 48 01 65 03 04 02 04 05 00 04 1c || H.
+		 * SHA-256:     30 31 30 0d 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20 || H.
+		 * SHA-384:     30 41 30 0d 06 09 60 86 48 01 65 03 04 02 02 05 00 04 30 || H.
+		 * SHA-512:     30 51 30 0d 06 09 60 86 48 01 65 03 04 02 03 05 00 04 40 || H.
+		 * SHA-512/224: 30 2d 30 0d 06 09 60 86 48 01 65 03 04 02 05 05 00 04 1c || H.
+		 * SHA-512/256: 30 31 30 0d 06 09 60 86 48 01 65 03 04 02 06 05 00 04 20 || H.
+```
+
+Briefly, the padded plaintext starts with two bytes `0x00 0x01` and continues with lots of `oxFF` bytes named `PS`. `PS` terminates with byte `0x00`. Here are the starts of ASN.1 content:
+
+![Decrypting the Signature ASN Tree](Images/DecryptingtheSignatureASNTree.jpg)
+
+As you can see, it is specifying the digest algorithm (`SHA-256`) and the digest value (`79007003e5756941bb23b36e2e599782277c22cb27b409497425be8e75637379`).
+
+Remember this digest value? It's the digest over the modified `authenticatedAttributes` we calculated in previous sub-sections.
 
 # Illustrative Summary of Content to be digested
 
