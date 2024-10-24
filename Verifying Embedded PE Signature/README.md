@@ -141,7 +141,7 @@ Open *dbgview64.exe* with *CFF Explorer*. In the `Optional Header`, there is a d
 
 Also, you can find the `Security Directory`  using *PE Bear* in `Security` tab.
 
-![PE-Bear Security Directory File Offset](Images/PEBearSecurityDirectory.JPG)
+![PE-Bear Security Directory File Offset](Images/PEBearSecurityDirectory.jpg)
 
 This section shows where the embedded digital signature is located and determines its size. For our sample file, it resides at offset `0x10B400` from the beginning of the file with a size of `0x2378`.
 
