@@ -470,8 +470,8 @@ And also most common ECDSA types:
 
 ```
 P256 (secp256r1)        {0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07}		// 1.2.840.10045.3.1.7
-P384 (secp384r1)		{0x2B, 0x81, 0x04, 0x00, 0x22}			        // 1.3.132.0.34
-P521 (secp521r1)		{0x2B, 0x81, 0x04, 0x00, 0x23}	 			// 1.3.132.0.35
+P384 (secp384r1)	{0x2B, 0x81, 0x04, 0x00, 0x22}			       		// 1.3.132.0.34
+P521 (secp521r1)	{0x2B, 0x81, 0x04, 0x00, 0x23}	 				// 1.3.132.0.35
 ```
 
 ![Certificates Subject Public Key Info ASN Tree](Images/CertificatessubjectPublicKeyInfoASNTree.jpg)
@@ -814,29 +814,29 @@ Recovered the plaintext
 By ignoring some details, we got a padded plaintext. According to [RFC of PKCS1-v1_5](https://www.rfc-editor.org/rfc/rfc8017#section-9.2), the recovered plaintext is based on this structure:
 
 ```
-	EM = 0x00 || 0x01 || PS || 0x00 || T
+EM = 0x00 || 0x01 || PS || 0x00 || T
 
-	M = Message to be encoded
-	H = Hash(M)
+M = Message to be encoded
+H = Hash(M)
 
-	EM = Encoded Message
-	PS = An octet string with value 0xff
-	T  = DER encoding of:
-		 DigestInfo ::= SEQUENCE {
-			 digestAlgorithm AlgorithmIdentifier,
-			 digest OCTET STRING
-		 }
+EM = Encoded Message
+PS = An octet string with value 0xff
+T  = DER encoding of:
+	 DigestInfo ::= SEQUENCE {
+		 digestAlgorithm AlgorithmIdentifier,
+		 digest OCTET STRING
+	 }
 
-		 All possible value of T per different hash algorithm:
-		 * MD2:         30 20 30 0c 06 08 2a 86 48 86 f7 0d 02 02 05 00 04 10 || H.
-		 * MD5:         30 20 30 0c 06 08 2a 86 48 86 f7 0d 02 05 05 00 04 10 || H.
-		 * SHA-1:       30 21 30 09 06 05 2b 0e 03 02 1a 05 00 04 14 || H.
-		 * SHA-224:     30 2d 30 0d 06 09 60 86 48 01 65 03 04 02 04 05 00 04 1c || H.
-		 * SHA-256:     30 31 30 0d 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20 || H.
-		 * SHA-384:     30 41 30 0d 06 09 60 86 48 01 65 03 04 02 02 05 00 04 30 || H.
-		 * SHA-512:     30 51 30 0d 06 09 60 86 48 01 65 03 04 02 03 05 00 04 40 || H.
-		 * SHA-512/224: 30 2d 30 0d 06 09 60 86 48 01 65 03 04 02 05 05 00 04 1c || H.
-		 * SHA-512/256: 30 31 30 0d 06 09 60 86 48 01 65 03 04 02 06 05 00 04 20 || H.
+	 All possible value of T per different hash algorithm:
+	 * MD2:         30 20 30 0c 06 08 2a 86 48 86 f7 0d 02 02 05 00 04 10 || H.
+	 * MD5:         30 20 30 0c 06 08 2a 86 48 86 f7 0d 02 05 05 00 04 10 || H.
+	 * SHA-1:       30 21 30 09 06 05 2b 0e 03 02 1a 05 00 04 14 || H.
+	 * SHA-224:     30 2d 30 0d 06 09 60 86 48 01 65 03 04 02 04 05 00 04 1c || H.
+	 * SHA-256:     30 31 30 0d 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20 || H.
+	 * SHA-384:     30 41 30 0d 06 09 60 86 48 01 65 03 04 02 02 05 00 04 30 || H.
+	 * SHA-512:     30 51 30 0d 06 09 60 86 48 01 65 03 04 02 03 05 00 04 40 || H.
+	 * SHA-512/224: 30 2d 30 0d 06 09 60 86 48 01 65 03 04 02 05 05 00 04 1c || H.
+	 * SHA-512/256: 30 31 30 0d 06 09 60 86 48 01 65 03 04 02 06 05 00 04 20 || H.
 ```
 
 Briefly, the padded plaintext starts with two bytes `0x00 0x01` and continues with lots of `oxFF` bytes named `PS`. `PS` terminates with byte `0x00`. Here are the starts of ASN.1 content:
