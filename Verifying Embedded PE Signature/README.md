@@ -918,26 +918,30 @@ Recall this digest value? It’s the digest calculated over the modified `authen
 
 As mentioned before, calculating the PE image hash is not strait-forward. So, you cannot get digest over the PE image file and considred it as PE hash. We want to delve info how can we do it based on [Microsoft Document](https://download.microsoft.com/download/9/c/5/9c5b2167-8017-4bae-9fde-d599bac8184a/Authenticode_PE.docx).
 
-First of all, take a look at it this figure:
+
+As mentioned earlier, calculating the PE image hash is not straightforward. You cannot simply generate a digest from the entire PE image file and consider it the PE hash. Let’s explore how to calculate it accurately according to [Microsoft's Documentation](https://download.microsoft.com/download/9/c/5/9c5b2167-8017-4bae-9fde-d599bac8184a/Authenticode_PE.docx).
+
+First, refer to the figure below:
 
 ![PE Image Hash](Images/PEImageHashOveral.jpg)
 
-All parts except for the gray ones must get involved in calculating the digest.
+Only the sections shown in color, excluding the gray areas, should be included in the digest calculation.
 
-As brief, you must do following rules in order to create a buffer which is used in calculate the PE image digest:
-1. Copy from the begging of the file to the beginning file offset of `Checksum` in OPTIONAL_HEADER of PE to the buffer.
-2. Discard `Checksum` fields. The size of this field is *4 bytes*.
-3. Copy from the end file offset of `Checksum` to beginning file offset of `IMAGE_DIRECTORY_ENTRY_SECURITY` of OPTIONAL_HEADER.DATA_DIRECTORY in PE to the buffer. This directory indicates where the certificate in PE file is located.
-4. Discard `IMAGE_DIRECTORY_ENTRY_SECURITY` directory. The size of this directory is *8 bytes*.
-5. Copy from the end file offset of `IMAGE_DIRECTORY_ENTRY_SECURITY` to the beginning of security directory RVA to the buffer.
-6. Discard Certificate section. This part are as large as the size is specified in security directory.
-7. Copy the remained bytes to the buffer.
+To create a buffer for calculating the PE image digest, follow these steps:
 
-Creating digest over the above buffer to get the PE image file hash.
+1. Copy from the beginning of the file up to the start offset of the `Checksum` field in the PE’s `OPTIONAL_HEADER` into the buffer.
+2. Exclude the `Checksum` field, which is 4 bytes in size.
+3. Copy from the end of the `Checksum` field up to the start offset of `IMAGE_DIRECTORY_ENTRY_SECURITY` in `OPTIONAL_HEADER.DATA_DIRECTORY` into the buffer. This directory indicates the location of the certificate in the PE file.
+4. Exclude the `IMAGE_DIRECTORY_ENTRY_SECURITY` directory, which is 8 bytes in size.
+5. Copy from the end offset of `IMAGE_DIRECTORY_ENTRY_SECURITY` up to the beginning of the security directory’s RVA into the buffer.
+6. Exclude the `Certificate` section, which is as large as the size specified in the security directory.
+7. Copy all remaining bytes into the buffer.
 
-*Note: In microsoft document, there is an extra rule specifies the section must be inserted in the buffer in ascending order based on the their PointerToRawData. I'm not sure! If you have more information plz share with me.*
+Generate a digest over this buffer to obtain the PE image file hash.
 
-We provide a python code to do the above rules automatically for us:
+*Note: Microsoft’s documentation mentions an additional rule, specifying that sections should be included in the buffer in ascending order based on their PointerToRawData. If you have more details on this, please share!*
+
+Below is Python code that automates the steps above for generating the PE image digest:
 
 ```py
 import pefile
@@ -986,9 +990,9 @@ SHA1:    572c2afd655367ff33351796fb8039935443d93d
 SHA256:  5301b868a4d1743e3f4205078b85169a041cb9abff82d83372455d756025c748
 ```
 
-Do you remember this hash? In `contentInfo` section we provide this hash. Go back and check again.
+Remember this hash? We included it in the `contentInfo` section. Please go back and verify it.
 
-In the beginning of this document, we calculated the digest of `notepad.exe`. Let's re-calculated the digest but this time by using the python script:
+At the beginning of this document, we calculated the digest of `notepad.exe`. Let’s recalculate the digest, but this time using the Python script:
 
 ```shell
 
