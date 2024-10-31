@@ -575,21 +575,19 @@ As mentioned, our focus is solely on the TBSCertificate field, so other fields w
 
 ### Calculating thumbprint
 
-Early in this document, we said the thumbprint is not specified in certificate and will be calculated every time you open the *Digital Signatures* dialog. But how?
+Earlier, we mentioned that the thumbprint is not stored directly in the certificate but is computed each time you open the *Digital Signatures* dialog. To generate the thumbprint, we calculate the SHA-1 (or occasionally MD5) hash of the `Certificate` field byte array, spanning the relevant offsets. (i.e start from offset `0x8D` to offset `0x68F` for the first certificate and from offset `0x690` to offset `0xE0D` for the second certificate which we did not cover here)
 
-Thumbprint of a certificate is specified by calculating SHA1 (or in less common cases MD5) hash of bytes array of `Certificate` field. (i.e start from offset *0x8D* to offset *0x68F* for the first certificate and from offset *0x690* to offset *0xE0D* for the second certificate which we did not cover here)
-
-For example for the first certificate we have the following hex sequence:
+In our example, the first certificate's hex sequence is as follows:
 
 `308205FF308203E7...17F9D1043853C4`
 
-The result of calculating the SHA1 hash of the sequence is `2485a7afa98e178cb8f30c9838346b514aea4769`. Exactly equivalent to what you've seen before in *Digital Signatures* tab:
+When we compute the SHA-1 hash for this sequence, we get `2485a7afa98e178cb8f30c9838346b514aea4769`, which matches what is displayed in the Digital Signatures tab:
 
 ![Thumbprint Details](Images/ThumbprintDetails.JPG)
 
 ## crls
 
-It is another *OPTIONAL* tag of *SignedData* which starts with byte *0xA1* indicates *[1] IMPLICIT*. The bytes at offset *0xE0E* is *0x31*. So, this field does not exist.
+This field in SignedData is *OPTIONAL*, marked by the byte `0xA1` indicating *[1] IMPLICIT*. Here, the byte at offset `0xE0E` is `0x31`, meaning this field does not exist.
 
 ## signerInfos
 
@@ -607,11 +605,9 @@ SignerInfo ::= SEQUENCE {
 }
 ```    
 
-`SignerInfos` is one of three important fields of `SignedData`. This field contains signature, hash algorithm, encryption algorithm and certificate serial number of the signer. So, we must delve into lots of the fields to extract the required information.
+`SignerInfos` is a critical field in `SignedData`, as it contains information on the signature, hash algorithm, encryption algorithm, and signer’s certificate serial number. Though SignerInfos can contain multiple SignerInfo entries (indicating multiple signers), we will focus on a single entry here.
 
-`SignerInfos` is a `SET OF` data type `SignerInfo`. It means it is possible to exist greater than of one `SignerInfo`. But it is very rarely. In our document, we only discuss about the *SignerInfos* with just one *SignerInfo*. 
-
-Here, `SignerInfos` has size of *0x155B* bytes from offset *0xE0E* to the end. It starts with byte *0x31* indicates *SET OF*. `SignerInfos` hash size of *0x1557* bytes from offset *0xE12* to the end. It starts with byte *0x30* indicates *SEQUENCE*. `SignerInfo` consists of 7 fields as mentioned above.
+`SignerInfos` is a `SET OF` data type `SignerInfo`. Here, `SignerInfos` has size of `0x155B` bytes from offset `0xE0E` to the file’s end. It starts with byte `0x31` indicates *SET OF*. `SignerInfos` has size of `0x1557` bytes from offset `0xE12` to the file’s end. It starts with byte `0x30` indicates *SEQUENCE*. `SignerInfo` consists of 7 fields as mentioned above.
 
 ### version
 
@@ -656,16 +652,15 @@ CertificateSerialNumber  ::=  INTEGER
 
 ![SignerInfo IssuerAndSerialNumber ASN Tree](Images/SignerInfoIssuerAndSerialNumber.jpg)
 
-Briefly, it contains two fields. A *SEQUENCE* field named *Name* and an *INTEGER* named *serialNumber*. We discard the first field but the second fields specifies which certificate (that we parsed in previous sections) has signed the PE.
+`issuerAndSerialNumber` includes two main fields: a *SEQUENCE* field named `Name` and an *INTEGER* field named `serialNumber`. Although we can disregard the `Name` field, the `serialNumber` field is crucial because it identifies the specific certificate used to sign the PE file.
 
-Field *name* has size of *0x7E* bytes from offset *0xE1C* to offset *0xE9B*. We discard this field.
-
-The second field, *serialNumber* is an *INTEGER* with size of *0x13* bytes from offset *0xE9C* to offset *0xEB0*. The value of this field specifies the certificate serial number of the signer. In our example, the value is: 
+- **Name Field**: This field spans `0x7E` bytes, located from offset `0xE1C` to offset `0xE9B`. We are discarding this field in our analysis.
+- **Serial Number Field**: The `serialNumber` field, located from offset `0xE9C` to offset `0xEB0`, is an *INTEGER* occupying `0x13` bytes. The value of this field specifies the certificate serial number of the signer. In our example, the value is: 
 `33 00 00 01 87 72 17 72 15 59 40 C7 09 00 00 00 00 01 87`
 
 ![SignerInfo SerialNumber File Offset](Images/SignerInfoSerialNumberFileOffset.jpg)
 
-Remember!? The first certificate we have parsed had the same serial number (If you forgot, review the Certificate section). So what? It means we must use the public key of the first certificate to verify the signature!
+Notice something familiar? This serial number matches the one we parsed for the first certificate in the Certificates section. This match confirms that the public key from the first certificate should be used to verify the signature.
 
 ### Parsing digestAlgorithm
 
@@ -684,7 +679,7 @@ AlgorithmIdentifier  ::=  SEQUENCE  {
 
 ![SignerInfo digestAlgorithm File Offset](Images/SignerInfodigestAlgorithmFileOffset.jpg)
 
-`digestAlgorithm` is the field specifies the hash algorithm by that the PE file is digested. It encompasses two fields `algorithm` and its parameters named `parameters`.
+`digestAlgorithm` specifies the hash algorithm used to generate the PE file's digest. It includes two subfields: `algorithm` and its `parameters`.
 
 ![SignerInfo digestAlgorithm ASNTree](Images/SignerInfodigestAlgorithmASNTree.jpg)
 
@@ -700,13 +695,13 @@ In our example, the hash algorithm is `SHA-256` and the parameters field is `NUL
 
 ![SignerInfo authenticatedAttributes ASN Tree](Images/SignerInfoauthenticatedAttributesASNTree.jpg)
 
-`authenticatedAttributes` consists of some of *SEQUENCE*s  Each *SEQUENCE* itself consists of two fields: an *OBJECT IDENTIFIER* and a *SET*. The most important *SEQUENCE* is the one with starts with OID `1.2.840.113549.1.9.4` which specifies `messageDigest`. In *SET* field of that, exist and *OCTET STRING* which specifies a value which is digest of *contentInfo*. The value must be same with the hash we calculated  berfore in *contentInfo* section.
+`authenticatedAttributes` contains multiple *SEQUENCE* elements. Each *SEQUENCE* consists of two fields: an *OBJECT IDENTIFIER* and a *SET*. The most critical *SEQUENCE* starts with OID `1.2.840.113549.1.9.4`, which indicates the `messageDigest`. Within this *SET* field, there is an *OCTET STRING* specifying a digest value derived from `contentInfo`. This value must match the hash calculated previously in the `contentInfo` section.
 
-Here the value is `E2FEB6E31C9B40CF9C326922FFD690CB17ABDEA3E06F27766888CD36F4515785`. Please go back to the *contentInfo* section and checks is same. 😁
+The value here is `E2FEB6E31C9B40CF9C326922FFD690CB17ABDEA3E06F27766888CD36F4515785`. Please refer to the `contentInfo` section and confirm it matches. 😁
 
-Here is the step three (and final step) of creating the message must be signed. This section contains `contentInfo` which itself contains PE image hash. So, calculating hash of `authenticatedAttributes` is a good choice for signing. But how?
+This is step three (the final step) of creating the message to be signed. This section includes `contentInfo`, which contains the PE image hash. Therefore, calculating the hash of `authenticatedAttributes` is recommended for signing. But how?
 
-`authenticatedAttributes` is a little bit tricky. According to RFC, the tag of this field must be change from `[0] IMPLICIT OPTIONAL` (`0xA0`) to `SET` (`0x31`) and then calculating the hash. So:
+`authenticatedAttributes` requires careful handling. According to the RFC, the tag of this field must be changed from `[0] IMPLICIT OPTIONAL` (`0xA0`) to `SET` (`0x31`) before calculating the hash, as shown below:
 
 `A0 81 AE ... 63 6F 6D` -> `31 81 AE ... 63 6F 6D`
 
@@ -714,9 +709,9 @@ The final message is:
 
 `31 81 AE 30 19 06 09 2A 86 48 86 F7 0D 01 09 03 31 0C 06 0A 2B 06 01 04 01 82 37 02 01 04 30 1C 06 0A 2B 06 01 04 01 82 37 02 01 0B 31 0E 30 0C 06 0A 2B 06 01 04 01 82 37 02 01 15 30 2F 06 09 2A 86 48 86 F7 0D 01 09 04 31 22 04 20 E2 FE B6 E3 1C 9B 40 CF 9C 32 69 22 FF D6 90 CB 17 AB DE A3 E0 6F 27 76 68 88 CD 36 F4 51 57 85 30 42 06 0A 2B 06 01 04 01 82 37 02 01 0C 31 34 30 32 A0 10 80 0E 00 44 00 62 00 67 00 56 00 69 00 65 00 77 A1 1E 80 1C 68 74 74 70 73 3A 2F 2F 77 77 77 2E 73 79 73 69 6E 74 65 72 6E 61 6C 73 2E 63 6F 6D`
 
-Congrats! It's the message must be used when you want to verify the signature. But where is the signature!? Keep it up!
+Congratulations! This message is required for signature verification. But where is the signature? Keep going!
 
-*Note: Based on the specified algorithm in previous section, we calculating `SHA-256` over the modified `authenticatedAttributes` field and the result is: `79007003e5756941bb23b36e2e599782277c22cb27b409497425be8e75637379`. Actually, calculating the hash is not mandatory. If you decrypt the signature (which we will reach to it next sub-sections) you can find this hash.*
+*Note: Based on the algorithm specified in the previous section, we calculate `SHA-256` over the modified `authenticatedAttributes` field, resulting in `79007003e5756941bb23b36e2e599782277c22cb27b409497425be8e75637379`. However, calculating this hash isn’t mandatory. By decrypting the signature (explained in upcoming sections), this hash can also be found.*
 
 ### Parsing digestEncryptionAlgorithm
 
@@ -737,9 +732,9 @@ AlgorithmIdentifier  ::=  SEQUENCE  {
 
 ![SignerInfo digestEncryptionAlgorithm ASN Tree](Images/SignerInfodigestEncryptionAlgorithmASNTree.jpg)
 
-`DigestEncryptionAlgorithmIdentifier` is the field specifies the encryption algorithm the hash of modified `authenticatedAttributes` is encrypted by. It encompasses two fields `algorithm` and its parameters named `parameters`.
+`DigestEncryptionAlgorithmIdentifier` field specifies the encryption algorithm used to encrypt the hash of the modified `authenticatedAttributes`. This field includes two components: `algorithm` and its associated `parameters`.
 
-It consists of `algorithm` and its `parameters`. In our case the first one is `RSA` and the second one is `NULL`. We discussed about the object id of encryption algorithm before.
+It contains the `algorithm` and its `parameters`. In this case, the algorithm is `RSA`, and the parameter is `NULL`. We previously discussed the object ID of this encryption algorithm.
 
 ### Parsing encryptedDigest
 
@@ -747,11 +742,11 @@ It consists of `algorithm` and its `parameters`. In our case the first one is `R
  - `0x100` bytes
  - offset [`0xF80`, `0x1083`] 
 
-`encryptedDigest` is the final field we delve into. Here is its value:
+The last field we examine is `encryptedDigest`. Its value is: 
 
 `CA A1 3F 31 AC D9 90 AA A7 B5 0E DA 79 0F 46 FB FB 22 93 F3 CB 8D D6 0B 6C 33 10 93 29 9E F8 E9 10 BE 2B AD 0E 1E 7D 42 88 49 2B 14 79 13 EC 13 13 85 25 17 C5 4F B6 96 F8 DC E3 9A 77 2E E3 D7 CF 8C 9B FC EE 31 61 3A 74 25 30 2F 5B E1 D1 98 BC F9 CA 3F F9 D0 5B AA 79 24 8A 95 3D 7F E7 93 A8 7B D9 FE 70 BC AA 9A 63 B2 3B 8F 59 1F 49 B4 F5 2A ED 9A B1 9F 94 98 FE E2 20 BD 35 A3 EF E9 A9 B3 CA 3D FF 41 89 E3 F0 AC 92 AF 52 F7 47 22 F8 01 AB 96 34 B9 AA 73 5F FA 60 C1 3B E9 C4 0C 91 5F FC 34 1F 14 79 27 B2 DC 00 DD 99 DB B9 4E A8 23 70 CF 1D C9 49 07 60 0E FA A0 E9 3E 32 45 81 87 65 C7 9B 11 2D 9D 8F A9 1A C0 55 13 27 82 33 1F F2 26 7A 00 22 61 75 34 08 13 80 1C 0D 74 80 89 D5 9B FB 72 13 97 52 78 98 71 35 35 01 B4 9A 65 5F DC CD E8 0F 50 03 66 0D 2A F1 A5 65 02`
 
-Ladies and Gentlemen, finally we reached to the signature! Here is the signature we must verify it against the digest we calculated in section `authenticatedAttributes`.
+Ladies and gentlemen, we’ve finally reached the signature! Here is the signature to be verified against the digest calculated in the `authenticatedAttributes` section.
 
 ### Parsing unauthenticatedAttributes
 
@@ -759,7 +754,7 @@ From offset *0x1084* to the end of the file. Discarded!
 
 ## Verifying the Signature
 
-Let's gather our information in one place here:
+Let’s consolidate all information here:
 
 message:
 
@@ -773,7 +768,7 @@ public key:
 
 `30 82 01 0A 02 82 01 01 00 CE B7 C9 0B 73 B3 F7 4F B3 0A 22 1A 2E 60 77 B0 30 59 A7 AB C0 32 BB B1 4E 85 90 90 69 B5 70 06 9D 95 4B 85 B2 07 64 1E E1 34 01 4F C6 81 CE 70 0D 0C 43 E3 1C A3 5D 3D 3F 17 CF 97 0D 6A 58 BA 5C 77 9F 4B C8 BF 59 7B 45 D2 F4 AC 3F C3 44 BF A9 81 1E E0 36 A7 57 F0 DB 00 7F 17 47 47 B0 9D C6 7D 9E 5C D2 C3 C9 8E 49 6C 89 8A 8F C3 9F 71 27 9E 24 33 DD 48 3A 08 8E D8 E5 33 8C D0 25 8C F8 9B 8C 25 9F 1F B5 33 43 54 CF 1D CE 1D C1 E8 A5 B3 C1 84 22 B6 C1 45 BE C8 5B 08 8E 6C BD 76 8D 64 F8 62 1E F5 35 08 2F 27 D1 67 EB E5 21 0F DC 76 BA 4D DD 2E 3F 38 BF 0B 75 36 E1 50 8A D2 89 C4 85 74 7D 5B 11 35 1D DA 6D 05 4E 2E AA 43 BA 06 EB D1 2C CD 2F AA 3C C7 33 87 2F 93 97 88 61 B0 83 A7 A4 89 70 35 FF 65 D7 63 BC 95 15 CD FD B6 57 9D 0E D6 63 4A 33 5B 7B 1D 73 CF 04 97 02 03 01 00 01`
 
-We provided a python code to verify the signature automatically:
+Here is a Python script to automate signature verification:
 
 ```py
 from Crypto.PublicKey import RSA
@@ -821,7 +816,7 @@ Mission is accomplished! 😁
 
 ## Decrypting the Signature
 
-It's a little bit odd to decrypt the signature but we don't want to end this game. We provide a python code to decrypt the signature and get what was signed:
+While decrypting the signature may seem unusual, let’s continue! Below is Python code to decrypt the signature and retrieve the signed data:
 
 ```py
 from Crypto.PublicKey import RSA
@@ -881,7 +876,7 @@ Recovered the plaintext
 30 31 30 0D 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20 79 00 70 03 E5 75 69 41 BB 23 B3 6E 2E 59 97 82 27 7C 22 CB 27 B4 09 49 74 25 BE 8E 75 63 73 79
 ```
 
-By ignoring some details, we got a padded plaintext. According to [RFC of PKCS1-v1_5](https://www.rfc-editor.org/rfc/rfc8017#section-9.2), the recovered plaintext is based on this structure:
+Skipping certain details, we obtain a padded plaintext. According to [RFC of PKCS1-v1_5](https://www.rfc-editor.org/rfc/rfc8017#section-9.2), the recovered plaintext adheres to this structure:
 
 ```
 EM = 0x00 || 0x01 || PS || 0x00 || T
@@ -909,13 +904,13 @@ T  = DER encoding of:
 	 * SHA-512/256: 30 31 30 0d 06 09 60 86 48 01 65 03 04 02 06 05 00 04 20 || H.
 ```
 
-Briefly, the padded plaintext starts with two bytes `0x00 0x01` and continues with lots of `oxFF` bytes named `PS`. `PS` terminates with byte `0x00`. Here are the starts of ASN.1 content:
+Briefly, the padded plaintext begins with the bytes` 0x00 0x01` and continues with multiple `0xFF` bytes, referred to as `PS`, ending with byte `0x00`. Here is the start of the ASN.1 content:
 
 ![Decrypting the Signature ASN Tree](Images/DecryptingtheSignatureASNTree.jpg)
 
-As you can see, it is specifying the digest algorithm (`SHA-256`) and the digest value (`79007003e5756941bb23b36e2e599782277c22cb27b409497425be8e75637379`).
+As shown, it specifies the digest algorithm (`SHA-256`) and the digest value `79007003e5756941bb23b36e2e599782277c22cb27b409497425be8e75637379`.
 
-Remember this digest value? It's the digest over the modified `authenticatedAttributes` we calculated in previous sub-sections.
+Recall this digest value? It’s the digest calculated over the modified `authenticatedAttributes` in previous sections.
 
 # Illustrative Summary of Content to be digested
 
