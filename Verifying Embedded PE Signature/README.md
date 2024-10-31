@@ -235,7 +235,11 @@ At this point, we have parsed up to offset `0x16`, where multiple fields and the
 
 ## version
 
-This field contains an *INTEGER* occupying 1 byte, from offset `0x16` to offset `0x19`. We can disregard this field.
+ - *INTEGER* 
+ - 1 byte
+ - offset [`0x16`, `0x19`] 
+ 
+We can disregard this field.
 
 ## digestAlgorithms
 
@@ -243,7 +247,11 @@ This field contains an *INTEGER* occupying 1 byte, from offset `0x16` to offset 
 DigestAlgorithmIdentifiers ::= SET OF DigestAlgorithmIdentifier
 ```
 
-This field is a *SET* of size `0x0F` bytes, from offset `0x1A` to offset `0x2A`, and can also be disregarded.
+ - *SET* 
+ - `0x0F` bytes
+ - offset [`0x1A`, `0x2A`] 
+ 
+We can disregard this field.
 
 ## contentInfo
 
@@ -276,8 +284,10 @@ AlgorithmIdentifier    ::=    SEQUENCE {
 }
 ```
 
-Warm-up is finished! `contentInfo` contains an *SEQUENCE* with size of *0x5C* byte from offset *0x2B* to offset *0x88*.
-
+ - *SEQUENCE* 
+ - `0x5C` bytes
+ - offset [`0x2B`, `0x88`] 
+ 
 ![ContentInfo DigestAlgorithm File Offset](Images/ContentInfoOffset.JPG)
 
 ![ContentInfo ASN.1 Tree](Images/ContentInfoASNTree.jpg)
@@ -291,6 +301,7 @@ Now that we know the content type is `SpcIndirectDataContent`, we can see it is 
 The `SpcIndirectDataContent` structure contains an important field named `messageDigest`, which itself includes `digestAlgorithm` and `digest`.
 
 ### digestAlgorithm
+
 `digestAlgorithm` field provides details about the algorithm (and any associated parameters) used to generate the digest.
 
 ![ContentInfo DigestAlgorithm File Offset](Images/digestAlgorithmFileOffset.jpg)
@@ -378,9 +389,11 @@ TBSCertificate  ::=  SEQUENCE  {
 }
 ```
 
-Here, `certificates` contains two certificates with aggregated size of *0xD81* bytes from offset *0x89* to offset *0xE0D*. It starts with byte *0xA0* indicates *[0] IMPLICIT*.
+ - *[0] IMPLICIT* of *SEQUENCE*
+ - `0xD81` bytes
+ - offset [`0x89`, `0xE0D`] 
 
-The first certificate with size *0x5FF* starts from offset *0x8D* and ends at offset *0x68F*. The second certificate with size 0x77A starts from offset 0x690 and ends at offset 0xE0D. Please keep the start and end of offset the certificates in mind, because we need them to calculating the thumbprint in future subsection. For simplicity, we only parse the first certificate and ignore the second one. Do it as your practice!
+Here, `certificates` contains two certificates with aggregated size of `0xD81`. The first certificate with size *0x5FF* starts from offset *0x8D* and ends at offset *0x68F*. The second certificate with size 0x77A starts from offset 0x690 and ends at offset 0xE0D. Please keep the start and end of offset the certificates in mind, because we need them to calculating the thumbprint in future subsection. For simplicity, we only parse the first certificate and ignore the second one. Do it as your practice!
 
 The most important and the only field we delve into here is `TBSCertificate`. It contains a *SEQUENCE* of 10 fields: `version`, `serialNumber`, `signature`, `issuer`, `validity`, `subject`, `subjectPublicKeyInfo`, `issuerUniqueID`, `subjectUniqueID`, `extensions`.
 
@@ -390,7 +403,11 @@ The most important and the only field we delve into here is `TBSCertificate`. It
 Version  ::=  INTEGER  {  v1(0), v2(1), v3(2)  }
 ```
 
-It contains a *[0] EXPLICIT* tag of *INTEGER* with size of 1 bytes from offset 0x95 to offset 0x99. We discard this field. 
+ - *[0] IMPLICIT* of *INTEGER*
+ - 1 byte
+ - offset [`0x95`, `0x99`] 
+
+We can disregard this field.
 
 ![Certificates Version File Offset](Images/CertificatesVersionFileOffset.jpg)
 
@@ -400,11 +417,15 @@ It contains a *[0] EXPLICIT* tag of *INTEGER* with size of 1 bytes from offset 0
 CertificateSerialNumber  ::=  INTEGER
 ```
 
+ - *INTEGER*
+ - `0x13` bytes
+ - offset [`0x9A`, `0xAE`] 
+
 ![Certificates Serial Number File Offset](Images/SerialNumberFileOffset.jpg)
 
 One of the most important field of certificate is serial number. Ideally it is unique around the world. But precisely, it is almost unique. In world of X.509, it is supposed the CAs generates the serial number using `issuerDN + serial`. The term *"issuerDN"* typically refers to the distinguished name (DN) of the issuer in a digital certificate. The issuer DN contains information about the entity that issued the certificate. The *"serial"* is an internal ID of the CAs that uniques certificates issued by them. But in real that does not happen.
 
-This contains a *INTEGER* with size of *0x13* bytes from offset *0x9A* to offset *0xAE*. In next sections, We use the serial number to determine which certificate got involved in signing the PE file.
+In future sections, We use the serial number to determine which certificate got involved in signing the PE file.
 
 Here, the serial number of the first certificate is: 
 `33 00 00 01 87 72 17 72 15 59 40 C7 09 00 00 00 00 01 87`
@@ -418,25 +439,41 @@ AlgorithmIdentifier  ::=  SEQUENCE  {
 }
 ```
 
-It contains a *SEQUENCE* with size of *0xD* bytes from offset *0xAF* to offset *0xBD*. We discard this field. 
+ - *SEQUENCE*
+ - `0xD` bytes
+ - offset [`0xAF`, `0xBD`] 
+
+We can disregard this field.
 
 ![Certificates Signature File Offset](Images/CertificatesSignatureFileOffset.jpg)
 
 ### issuer
 
-It contains a *SEQUENCE* with size of *0x7E* bytes from offset *0xBE* to offset *0x13D*. We discard this field. 
+ - *SEQUENCE*
+ - `0x7E` bytes
+ - offset [`0xBE`, `0x13D`] 
+
+We can disregard this field.
 
 ![Certificates Issuer File Offset](Images/CertificatesIssuerFileOffset.jpg)
 
 ### validity
 
-It contains a *SEQUENCE* with size of *0x1E* bytes from offset *0x13E* to offset *0x15D*. We discard this field. 
+ - *SEQUENCE*
+ - `0x1E` bytes
+ - offset [`0x13E`, `0x15D`] 
+
+We can disregard this field.
 
 ![Certificates Validity File Offset](Images/CertificatesValidityFileOffset.jpg)
 
 ### subject
 
-It contains a *SEQUENCE* with size of *0x74* bytes from offset *0x15E* to offset *0x1D3*. We discard this field. 
+ - *SEQUENCE*
+ - `0x74` bytes
+ - offset [`0x15E`, `0x1D3`] 
+
+We can disregard this field.
 
 ![Certificates Subject File Offset](Images/CertificatesSubjectFileOffset.jpg)
 
@@ -457,7 +494,9 @@ AlgorithmIdentifier  ::=  SEQUENCE  {
 }
 ```
 
-It contains a *SEQUENCE* with size of *0x122* bytes from offset *0x1D4* to offset *0x1E6*. 
+ - *SEQUENCE*
+ - `0x122` bytes
+ - offset [`0x1D4`, `0x1E6`] 
 
 ![Certificates Subject Public Key Info File Offset](Images/CertificatessubjectPublicKeyInfoFileOffset.jpg)
 
@@ -511,19 +550,27 @@ This field starts with byte *0xA2* indicates *[2] IMPLICIT*. The bytes at offset
 
 This field starts with byte *0xA3* indicates *[3] EXPLICIT*. The bytes at offset 0x2fA is *0xA3*. So, this field exists for this certificate.
 
-It contains a *SEQUENCE* with size of 0x17A bytes from offset 0x2fE to offset 0x47B. We discard this field. 
+It contains a *SEQUENCE* with size of 0x17A bytes from offset 0x2fE to offset 0x47B. We can disregard this field.
 
 ![Certificates Extensions File Offset](Images/CertificatesExtensionsFileOffset.jpg)
 
 ## signatureAlgorithm
 
-It contains a *SEQUENCE* with size of *0xD* bytes from offset *0x47C* to offset *0x48A*. As mentioned, we decided to discuss only about the `TBSCertificate` field. So, we discard this field. 
+ - *SEQUENCE*
+ - `0xD` bytes
+ - offset [`0x47C`, `0x48A`] 
+
+As mentioned, we decided to discuss only about the `TBSCertificate` field. So, we disregard this field.
 
 ![Certificates SignatureAlgorithm File Offset](Images/CertificatesSignatureAlgorithmFileOffset.jpg)
 
 ## signatureValue
 
-It contains a *BIT STRING* with size of *0x201* bytes from offset 0x48B to offset *0x68F*. We discard this field. As mentioned, we decided to discuss only about the `TBSCertificate` field. So, we discard this field. 
+ - *BIT STRING*
+ - `0x201` bytes
+ - offset [`0x48B`, `0x68F`] 
+
+As mentioned, we decided to discuss only about the `TBSCertificate` field. So, we disregard this field.
 
 ![Certificates SignatureValue File Offset](Images/CertificatesSignatureValueFileOffset.jpg)
 
@@ -569,7 +616,11 @@ Here, `SignerInfos` has size of *0x155B* bytes from offset *0xE0E* to the end. I
 
 ### version
 
-It contains an *INTEGER* with size of 1 bytes from offset *0xE16* to offset *0xE18*. We discard this field. 
+ - *INTEGER*
+ - 1 byte
+ - offset [`0xE16`, `0xE18`] 
+
+We can disregard this field.
 
 ### Parsing issuerAndSerialNumber
 
@@ -600,7 +651,9 @@ AttributeValue ::= ANY -- DEFINED BY AttributeType
 CertificateSerialNumber  ::=  INTEGER
 ```
 
-It contains an *SEQUENCE* with size of *0x95* bytes from offset *0xE19* to offset *0xEB0*.
+ - *SEQUENCE*
+ - `0x95` bytes
+ - offset [`0xE19`, `0xEB0`] 
 
 ![SignerInfo IssuerAndSerialNumber ASN Tree](Images/SignerInfoIssuerAndSerialNumber.jpg)
 
@@ -626,9 +679,13 @@ AlgorithmIdentifier  ::=  SEQUENCE  {
 }
 ```    
 
+ - *SEQUENCE*
+ - `0x0D` bytes
+ - offset [`0xEB1`, `0xEBF`] 
+
 ![SignerInfo digestAlgorithm File Offset](Images/SignerInfodigestAlgorithmFileOffset.jpg)
 
-`digestAlgorithm` is the field specifies the hash algorithm by that the PE file is digested. It contains an *SEQUENCE* with size of *0x0D* bytes from offset *0xEB1* to offset *0xEBF*. `digestAlgorithm` encompasses two fields `algorithm` and its parameters named `parameters`.
+`digestAlgorithm` is the field specifies the hash algorithm by that the PE file is digested. It encompasses two fields `algorithm` and its parameters named `parameters`.
 
 ![SignerInfo digestAlgorithm ASNTree](Images/SignerInfodigestAlgorithmASNTree.jpg)
 
@@ -636,7 +693,9 @@ In our example, the hash algorithm is `SHA-256` and the parameters field is `NUL
 
 ### Parsing authenticatedAttributes
 
-`authenticatedAttributes` is an OPTIONAL field which starts with byte *0xA0* due to *[0] IMPLICIT*. This field has size of *0xAE* bytes from offset *0xEC0* to offset *0xF70*.
+ - *[0] IMPLICIT*
+ - `0xAE` bytes
+ - offset [`0xEC0`, `0xF70`] 
 
 ![SignerInfo authenticatedAttributes File Offset](Images/SignerInfoauthenticatedAttributesFileOffset.jpg)
 
@@ -671,17 +730,25 @@ AlgorithmIdentifier  ::=  SEQUENCE  {
 }
 ```
 
-`digestEncryptionAlgorithm` is the field specifies the encryption algorithm the hash of modified `authenticatedAttributes` is encrypted by. It contains an *SEQUENCE* with size of *0x0D* bytes from offset *0xF71* to offset *0xF7F*. `digestAlgorithm` encompasses two fields `algorithm` and its parameters named `parameters`.
+ - *SEQUENCE*
+ - `0x0D` bytes
+ - offset [`0xF71`, `0xF7F`] 
 
 ![SignerInfo digestEncryptionAlgorithm File Offset](Images/SignerInfodigestEncryptionAlgorithmFileOffset.jpg)
 
 ![SignerInfo digestEncryptionAlgorithm ASN Tree](Images/SignerInfodigestEncryptionAlgorithmASNTree.jpg)
 
-It consists of `algorithm` and its `parameters`. In our case the first one is **RSA** and the second one is **NULL**. We discussed about the object id of encryption algorithm before.
+`DigestEncryptionAlgorithmIdentifier` is the field specifies the encryption algorithm the hash of modified `authenticatedAttributes` is encrypted by. It encompasses two fields `algorithm` and its parameters named `parameters`.
+
+It consists of `algorithm` and its `parameters`. In our case the first one is `RSA` and the second one is `NULL`. We discussed about the object id of encryption algorithm before.
 
 ### Parsing encryptedDigest
 
-Here is final field we delve into. `encryptedDigest` is an `OCTET STRING` with size of *0x100* bytes from offset *0xF80* to offset *0x1083*. Here is its value:
+ - *OCTET STRING*
+ - `0x100` bytes
+ - offset [`0xF80`, `0x1083`] 
+
+`encryptedDigest` is the final field we delve into. Here is its value:
 
 `CA A1 3F 31 AC D9 90 AA A7 B5 0E DA 79 0F 46 FB FB 22 93 F3 CB 8D D6 0B 6C 33 10 93 29 9E F8 E9 10 BE 2B AD 0E 1E 7D 42 88 49 2B 14 79 13 EC 13 13 85 25 17 C5 4F B6 96 F8 DC E3 9A 77 2E E3 D7 CF 8C 9B FC EE 31 61 3A 74 25 30 2F 5B E1 D1 98 BC F9 CA 3F F9 D0 5B AA 79 24 8A 95 3D 7F E7 93 A8 7B D9 FE 70 BC AA 9A 63 B2 3B 8F 59 1F 49 B4 F5 2A ED 9A B1 9F 94 98 FE E2 20 BD 35 A3 EF E9 A9 B3 CA 3D FF 41 89 E3 F0 AC 92 AF 52 F7 47 22 F8 01 AB 96 34 B9 AA 73 5F FA 60 C1 3B E9 C4 0C 91 5F FC 34 1F 14 79 27 B2 DC 00 DD 99 DB B9 4E A8 23 70 CF 1D C9 49 07 60 0E FA A0 E9 3E 32 45 81 87 65 C7 9B 11 2D 9D 8F A9 1A C0 55 13 27 82 33 1F F2 26 7A 00 22 61 75 34 08 13 80 1C 0D 74 80 89 D5 9B FB 72 13 97 52 78 98 71 35 35 01 B4 9A 65 5F DC CD E8 0F 50 03 66 0D 2A F1 A5 65 02`
 
