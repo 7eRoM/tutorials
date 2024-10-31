@@ -70,7 +70,7 @@ By clicking on *View Certificate* and navigating to the *Details* tab, you can f
 
 ![Certification Details](Images/CertificationDetails.JPG)
 
-However, some fields are not part of the certificate and can only be viewed in the GUI. Unfortunately (1), one of these is the *Thumbprint*, which is recalculated every time you open this dialog. As a result, we need to calculate it manually, which will be explained later.
+However, some fields are not part of the certificate and can only be viewed in the GUI. Unfortunately (!), one of these is the *Thumbprint*, which is recalculated every time you open this dialog. As a result, we need to calculate it manually, which will be explained later.
 
 ![Thumbprint Details](Images/ThumbprintDetails.JPG)
 
@@ -209,7 +209,7 @@ ContentType ::= OBJECT IDENTIFIER
 
 > contentType indicates the type of content. It is an object identifier, which means it is a unique string of integers assigned by the authority that defines the content type. This document defines six content types: *data*, *signedData*, *envelopedData*, *signedAndEnvelopedData*, *digestedData*, and *encryptedData*.
 
-Here we only consider the *signedData*, so the value of *content* field is as follows:
+We are focusing on *signedData* specifically, so the content of the content field is structured as follows:
 
 ```ASN.1
 SignedData ::= SEQUENCE {
@@ -224,18 +224,18 @@ SignedData ::= SEQUENCE {
 
 ![Main ContentInfo File Offset](Images/MainContentInfo.jpg)
 
-- The First 4 bytes are the `ContentInfo` field. It means it is a *SEQUENCE* contains *0x2369* bytes.
-- The yellow box contains `contentType` field. It is an OID (Object Identifier) which defines the type of the content.
+- The first 4 bytes represent the `ContentInfo` field, indicating a *SEQUENCE* containing `0x2369` bytes.
+- The yellow box highlights the `contentType` field, which is an OID (Object Identifier) defining the type of the content. 
 ![SignedData OID](Images/signedDataOID.jpg)
-- The unfinished green box contains `content` field. This field related to the value of *contentType*. Here, it is the signed data. The byte `0xA0` indicates *[0] EXPLICIT* contains 0x235A bytes. The next 4 bytes are the `SignedData` structure represented as a *SEQUENCE* and contains 0x2356 bytes.
+- The unfinished green box represents `content` field, corresponding to the value of `contentType`. Here, it represents signed data. The byte `0xA0` signifies `[0] EXPLICIT`, containing `0x235A` bytes. The following 4 bytes represent `SignedData` structure as a *SEQUENCE* containing `0x2356` bytes.
 
-*Note: For a brief introduction to `ASN.1`, refer to the appendix.*
+*Note: For a brief introduction to `ASN.1`, see the appendix.*
 
-By here, we parsed until offset *0x16*. You can see numerous fields and their types. There are more details per field, but we will delve into some of the important fields required to continue. `contentInfo`, `certificates` and `signerInfos` are 3 important fields in the `SignedData` structure which we will discuss.
+At this point, we have parsed up to offset `0x16`, where multiple fields and their types are visible. While there are additional details for each field, we will focus on the essential fields needed to proceed: `contentInfo`, `certificates`, and `signerInfos` within the `SignedData` structure.
 
 ## version
 
-It contains an *INTEGER* with size of *1* byte from offset *0x16* to offset *0x19*. We discard this field.
+This field contains an *INTEGER* occupying 1 byte, from offset `0x16` to offset `0x19`. We can disregard this field.
 
 ## digestAlgorithms
 
@@ -243,7 +243,7 @@ It contains an *INTEGER* with size of *1* byte from offset *0x16* to offset *0x1
 DigestAlgorithmIdentifiers ::= SET OF DigestAlgorithmIdentifier
 ```
 
-It contains a *SET* with size of 0x0F bytes from offset 0x1A to offset *0x2A*. We discard this field, too.
+This field is a *SET* of size `0x0F` bytes, from offset `0x1A` to offset `0x2A`, and can also be disregarded.
 
 ## contentInfo
 
@@ -282,22 +282,22 @@ Warm-up is finished! `contentInfo` contains an *SEQUENCE* with size of *0x5C* by
 
 ![ContentInfo ASN.1 Tree](Images/ContentInfoASNTree.jpg)
 
-As you can see, `ContentInfo` field is a *SEQUENCE* containing two fields: `contentType` and `content`. In here, the `contentType` is an OID which defines the type of the content. The value of this field must be `1.3.6.1.4.1.311.2.1.4` which is `SpcIndirectDataContent`.
+As shown, `ContentInfo` field is a *SEQUENCE* that includes two fields: `contentType` and `content`. Here, the `contentType` is an OID that specifies the content type. The value of this field should be `1.3.6.1.4.1.311.2.1.4`, representing `SpcIndirectDataContent`.
 
-`Content` field is starts with *[0] EXPLICIT*, so the byte in offset *0x39* is *0xA0* with size of *0x4E* bytes.
+`Content` field starts with `[0] EXPLICIT`, meaning the byte at offset `0x39` is `0xA0`, with a size of `0x4E` bytes.
 
-Now we know the type of content is `SpcIndirectDataContent`. This is a *SEQUENCE* with two fields, `data` and `messageDigest`, with size of *0x4E* which start in offset *0x3B* and ends in offset *0x88*. 
+Now that we know the content type is `SpcIndirectDataContent`, we can see it is a *SEQUENCE* with two fields, `data` and `messageDigest`, spanning `0x4E` bytes from offset `0x3B` to offset `0x88`.
 
-`SpcIndirectDataContent` contains an important field named `messageDigest` which itself contains `digestAlgorithm` and `digest`.
+The `SpcIndirectDataContent` structure contains an important field named `messageDigest`, which itself includes `digestAlgorithm` and `digest`.
 
 ### digestAlgorithm
-`digestAlgorithm` contains information about the algorithm (and its parameters) used to generate the digest.
+`digestAlgorithm` field provides details about the algorithm (and any associated parameters) used to generate the digest.
 
 ![ContentInfo DigestAlgorithm File Offset](Images/digestAlgorithmFileOffset.jpg)
 
-As you can see, it contains the hash algorithm used (`sha256`) and the parameters (`NULL`).
+As shown, it specifies the hash algorithm (`sha256`) and parameters (`NULL`).
 
-Here the list of most common hash algorithms with their OIDs and encoded DER representation:
+Below is a list of the most common hash algorithms with their corresponding OIDs and encoded DER representations:
 
 ```
 MD2 		    {0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x02, 0x02}			// 1.2.840.113549.2.2
@@ -311,24 +311,23 @@ SHA512-224 	    {0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x05}		// 2.16.
 SHA512-256 	    {0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x06}		// 2.16.840.1.101.3.4.2.6
 ```
 
-*Note: It is worth noting that hte parameters are not always `NULL`.*
+*Note: It's important to mention that parameters are not always `NULL`.*
 
 ### digest
 
-`digest` is the actual hash value of the PE image file. It's calculated using the hash algorithm specified in the `digestAlgorithm` field. Calculating the digest of a PE file is not a strait forward task! For moe information, refer to the appendix.
+`digest` field holds the actual hash value of the PE image file, calculated using the hash algorithm specified in the `digestAlgorithm` field. Calculating a PE file’s digest isn’t straightforward! For further details, see the appendix.
 
 ![ContentInfo Digest File Offset](Images/DigestFileOffset.jpg)
 
-The bytes related to the `digest` field are highlighted in the image above. The first two bytes represent the ASN.1 tag and the length of the digest, followed by the actual digest value. In our sample file, the digest is: 
-`5301B868A4D1743E3F4205078B85169A041CB9ABFF82D83372455D756025C748`
+In the image above, the bytes corresponding to `digest` field are highlighted. The first two bytes represent the ASN.1 tag and the digest length, followed by the digest value itself. In our example file, the digest is: `5301B868A4D1743E3F4205078B85169A041CB9ABFF82D83372455D756025C748`
 
-It is the digest of PE image file, but it is not directly as the message to be signed. It is just step 1 to create the message must be signed. There are two more steps! To find out the step two, go to next sub-section.
+This value represents the digest of the PE image file. However, it’s not directly used as the message to be signed—this is only the first step in creating the final message. Two additional steps are required. To proceed with the second step, refer to the next section.
 
 ### Calculating digest of contentInfo 
 
-Here is the step two (the semi-final step) of creating the message must be signed. Review `contentInfo` ASN tree again. It is consists of a `content` with type `SpcAttributeTypeAndOptionalValue` With the hash algorithm specified in previous sub-section, create a a digest of `SpcAttributeTypeAndOptionalValue` without the *OPTIONAL* and following first *SEQUENCE* tag: I mean only the concat of `data` and `messageDigest`.
+This is the second (semi-final) step in creating the message to be signed. Revisit the `contentInfo` ASN tree: it consists of a `content` field with the type `SpcAttributeTypeAndOptionalValue`. Using the previously specified hash algorithm, create a digest of `SpcAttributeTypeAndOptionalValue`, excluding the *OPTIONAL* part and omitting the first *SEQUENCE* tag. This means concatenating only the `data` and `messageDigest` fields.
 
-In our sample file, it starts in offset *0x3D* and ends in offset *0x88*.
+In our example file, this section starts at offset `0x3D` and ends at offset `0x88`.
 
 ![Certificates Version File Offset](Images/ContentInfoToBeDigestedFileOffset.jpg)
 
@@ -336,13 +335,18 @@ In our sample file, it starts in offset *0x3D* and ends in offset *0x88*.
 
 `messageDigest`: `3031300D0609608648016503040201050004205301B868A4D1743E3F4205078B85169A041CB9ABFF82D83372455D756025C748`
 
-The SHA-256 digest of concat of *data* and *messageDigest* is as follows:
+The SHA-256 digest of the concatenated `data` and `messageDigest` fields is as follows:
 
 `E2FEB6E31C9B40CF9C326922FFD690CB17ABDEA3E06F27766888CD36F4515785`
 
 But you may ask why the content of *ContentInfo* is selected as a part of message to be signed. Because, it contains the used hash algorithm besides the PE image file hash.
 
 However, we are just in step two! One more step is required. So, Be Patient!
+
+
+You may wonder why `ContentInfo` content is included as part of the message to be signed. This is because it contains the hash algorithm used, in addition to the PE image file hash.
+
+However, we are only on step two—one more step remains. So, stay tuned!
 
 ## certificates
 
