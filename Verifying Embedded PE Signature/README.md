@@ -14,7 +14,6 @@ For a given signed PE file, with the signature embedded, we extract the signatur
 - Using Windows APIs like `WinTrust` to verify signatures
 - A full tutorial on ASN.1
 
-
 # Tools
 
 - CFF Explorer
@@ -349,11 +348,6 @@ In our example file, this section starts at offset `0x3D` and ends at offset `0x
 The SHA-256 digest of the concatenated `data` and `messageDigest` fields is as follows:
 
 `E2FEB6E31C9B40CF9C326922FFD690CB17ABDEA3E06F27766888CD36F4515785`
-
-But you may ask why the content of *ContentInfo* is selected as a part of message to be signed. Because, it contains the used hash algorithm besides the PE image file hash.
-
-However, we are just in step two! One more step is required. So, Be Patient!
-
 
 You may wonder why `ContentInfo` content is included as part of the message to be signed. This is because it contains the hash algorithm used, in addition to the PE image file hash.
 
