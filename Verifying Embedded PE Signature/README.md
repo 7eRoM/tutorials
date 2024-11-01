@@ -22,6 +22,7 @@ For a given signed PE file, with the signature embedded, we extract the signatur
 - pe bear
 
 # Links
+
  - Parsing ASN.1: https://pkitools.net/pages/ca/asn1.html
  - Calculating hash from hex sequence: https://emn178.github.io/online-tools/
  - ASN.1 tutorial: https://obj-sys.com/asn1tutorial/asn1only.html
@@ -30,15 +31,13 @@ For a given signed PE file, with the signature embedded, we extract the signatur
 
 # Table of Contents
 
+- Introduction
 - Parsing PE
 - Parsing WIN_CERTIFICATE
 - PKCS #n
 - Structure of PKCS #7
-- Parsing ContentInfo
-- Parsing Certificates
-- Parsing SignInfo
-- Appendix A: Calculating the PE Image Hash
-- Appendix B: A Brief Introduction to ASN.1
+- Appendix A: A Brief Introduction to ASN.1
+- Appendix B: Calculating the PE Image Hash
 - Appendix C: Most Important Fields of PKCS7
 
 # Introduction
@@ -912,94 +911,7 @@ As shown, it specifies the digest algorithm (`SHA-256`) and the digest value `79
 
 Recall this digest value? It’s the digest calculated over the modified `authenticatedAttributes` in previous sections.
 
-# Illustrative Summary of Content to be digested
-
-# Appendix A: Calculating the PE Image Hash
-
-As mentioned before, calculating the PE image hash is not strait-forward. So, you cannot get digest over the PE image file and considred it as PE hash. We want to delve info how can we do it based on [Microsoft Document](https://download.microsoft.com/download/9/c/5/9c5b2167-8017-4bae-9fde-d599bac8184a/Authenticode_PE.docx).
-
-
-As mentioned earlier, calculating the PE image hash is not straightforward. You cannot simply generate a digest from the entire PE image file and consider it the PE hash. Let’s explore how to calculate it accurately according to [Microsoft's Documentation](https://download.microsoft.com/download/9/c/5/9c5b2167-8017-4bae-9fde-d599bac8184a/Authenticode_PE.docx).
-
-First, refer to the figure below:
-
-![PE Image Hash](Images/PEImageHashOveral.jpg)
-
-Only the sections shown in color, excluding the gray areas, should be included in the digest calculation.
-
-To create a buffer for calculating the PE image digest, follow these steps:
-
-1. Copy from the beginning of the file up to the start offset of the `Checksum` field in the PE’s `OPTIONAL_HEADER` into the buffer.
-2. Exclude the `Checksum` field, which is 4 bytes in size.
-3. Copy from the end of the `Checksum` field up to the start offset of `IMAGE_DIRECTORY_ENTRY_SECURITY` in `OPTIONAL_HEADER.DATA_DIRECTORY` into the buffer. This directory indicates the location of the certificate in the PE file.
-4. Exclude the `IMAGE_DIRECTORY_ENTRY_SECURITY` directory, which is 8 bytes in size.
-5. Copy from the end offset of `IMAGE_DIRECTORY_ENTRY_SECURITY` up to the beginning of the security directory’s RVA into the buffer.
-6. Exclude the `Certificate` section, which is as large as the size specified in the security directory.
-7. Copy all remaining bytes into the buffer.
-
-Generate a digest over this buffer to obtain the PE image file hash.
-
-*Note: Microsoft’s documentation mentions an additional rule, specifying that sections should be included in the buffer in ascending order based on their PointerToRawData. If you have more details on this, please share!*
-
-Below is Python code that automates the steps above for generating the PE image digest:
-
-```py
-import pefile
-import hashlib
-import sys
-
-pe = pefile.PE(sys.argv[1], fast_load=True) 
-
-# Extract Security directory
-security_directory = pe.OPTIONAL_HEADER.DATA_DIRECTORY[pefile.DIRECTORY_ENTRY['IMAGE_DIRECTORY_ENTRY_SECURITY']]    
-
-# CheckSum file offset
-checksum_offset = pe.OPTIONAL_HEADER.dump_dict()['CheckSum']['FileOffset']  
-
-# IMAGE_DIRECTORY_ENTRY_SECURITY file offset
-certificate_table_offset = security_directory.dump_dict()['VirtualAddress']['FileOffset'] 
-
-# Certificate section virtual address and size
-certificate_virtual_addr = security_directory.VirtualAddress
-certificate_size = security_directory.Size
-
-# Read PE image file
-raw_data = pe.__data__
-
-# Skip OptionalHeader.CheckSum field and continue until IMAGE_DIRECTORY_ENTRY_SECURITY
-buffer = raw_data[:checksum_offset] + raw_data[checksum_offset+0x04:certificate_table_offset]   
-
-# Skip IMAGE_DIRECTORY_ENTRY_SECURITY and certificate if exist
-if certificate_virtual_addr == 0 or certificate_size == 0:
-    buffer += raw_data[certificate_table_offset+0x08:]
-else:
-    buffer += raw_data[certificate_table_offset+0x08:certificate_virtual_addr] + raw_data[certificate_virtual_addr+certificate_size:]   
-
-# Digest of PE image file
-print(f"MD5:\t {hashlib.md5(buffer).hexdigest()}")
-print(f"SHA1:\t {hashlib.sha1(buffer).hexdigest()}")
-print(f"SHA256:\t {hashlib.sha256(buffer).hexdigest()}")
-```
-
-Let's ecevute the script for our sample file, `dbgview64.exe`:
-
-```shell
-$ python3 pe_image_hash_calculator.py dbgview64.exe
-MD5:     29c22bf29b3e9e7b1d9ef9d7fc2631f0
-SHA1:    572c2afd655367ff33351796fb8039935443d93d
-SHA256:  5301b868a4d1743e3f4205078b85169a041cb9abff82d83372455d756025c748
-```
-
-Remember this hash? We included it in the `contentInfo` section. Please go back and verify it.
-
-At the beginning of this document, we calculated the digest of `notepad.exe`. Let’s recalculate the digest, but this time using the Python script:
-
-```shell
-
-
-```
-
-# Appendix B: A Brief Introduction to ASN.1
+# Appendix A: A Brief Introduction to ASN.1
 
 ASN.1 (Abstract Syntax Notation One) is a standardized language used to describe data structures for representing, encoding, transmitting, and decoding data. It is widely used in telecommunications, cryptography, and networking protocols for defining complex data types in a platform-independent way.
 
@@ -1407,6 +1319,90 @@ PersonInfo ::= {
 
 ```
 30 0B A0 03 02 01 07 A1 03 02 02 07
+```
+
+# Appendix B: Calculating the PE Image Hash
+
+As mentioned earlier, calculating the PE image hash is not straightforward. You cannot simply generate a digest from the entire PE image file and consider it the PE hash. Let’s explore how to calculate it accurately according to [Microsoft's Documentation](https://download.microsoft.com/download/9/c/5/9c5b2167-8017-4bae-9fde-d599bac8184a/Authenticode_PE.docx).
+
+First, refer to the figure below:
+
+![PE Image Hash](Images/PEImageHashOveral.jpg)
+
+Only the sections shown in color, excluding the gray areas, should be included in the digest calculation.
+
+To create a buffer for calculating the PE image digest, follow these steps:
+
+1. Copy from the beginning of the file up to the start offset of the `Checksum` field in the PE’s `OPTIONAL_HEADER` into the buffer.
+2. Exclude the `Checksum` field, which is 4 bytes in size.
+3. Copy from the end of the `Checksum` field up to the start offset of `IMAGE_DIRECTORY_ENTRY_SECURITY` in `OPTIONAL_HEADER.DATA_DIRECTORY` into the buffer. This directory indicates the location of the certificate in the PE file.
+4. Exclude the `IMAGE_DIRECTORY_ENTRY_SECURITY` directory, which is 8 bytes in size.
+5. Copy from the end offset of `IMAGE_DIRECTORY_ENTRY_SECURITY` up to the beginning of the security directory’s RVA into the buffer.
+6. Exclude the `Certificate` section, which is as large as the size specified in the security directory.
+7. Copy all remaining bytes into the buffer.
+
+Generate a digest over this buffer to obtain the PE image file hash.
+
+*Note: Microsoft’s documentation mentions an additional rule, specifying that sections should be included in the buffer in ascending order based on their PointerToRawData. If you have more details on this, please share!*
+
+Below is Python code that automates the steps above for generating the PE image digest:
+
+```py
+import pefile
+import hashlib
+import sys
+
+pe = pefile.PE(sys.argv[1], fast_load=True) 
+
+# Extract Security directory
+security_directory = pe.OPTIONAL_HEADER.DATA_DIRECTORY[pefile.DIRECTORY_ENTRY['IMAGE_DIRECTORY_ENTRY_SECURITY']]    
+
+# CheckSum file offset
+checksum_offset = pe.OPTIONAL_HEADER.dump_dict()['CheckSum']['FileOffset']  
+
+# IMAGE_DIRECTORY_ENTRY_SECURITY file offset
+certificate_table_offset = security_directory.dump_dict()['VirtualAddress']['FileOffset'] 
+
+# Certificate section virtual address and size
+certificate_virtual_addr = security_directory.VirtualAddress
+certificate_size = security_directory.Size
+
+# Read PE image file
+raw_data = pe.__data__
+
+# Skip OptionalHeader.CheckSum field and continue until IMAGE_DIRECTORY_ENTRY_SECURITY
+buffer = raw_data[:checksum_offset] + raw_data[checksum_offset+0x04:certificate_table_offset]   
+
+# Skip IMAGE_DIRECTORY_ENTRY_SECURITY and certificate if exist
+if certificate_virtual_addr == 0 or certificate_size == 0:
+    buffer += raw_data[certificate_table_offset+0x08:]
+else:
+    buffer += raw_data[certificate_table_offset+0x08:certificate_virtual_addr] + raw_data[certificate_virtual_addr+certificate_size:]   
+
+# Digest of PE image file
+print(f"MD5:\t {hashlib.md5(buffer).hexdigest()}")
+print(f"SHA1:\t {hashlib.sha1(buffer).hexdigest()}")
+print(f"SHA256:\t {hashlib.sha256(buffer).hexdigest()}")
+```
+
+Let's ecevute the script for our sample file, `dbgview64.exe`:
+
+```shell
+$ python3 pe_image_hash_calculator.py dbgview64.exe
+MD5:     29c22bf29b3e9e7b1d9ef9d7fc2631f0
+SHA1:    572c2afd655367ff33351796fb8039935443d93d
+SHA256:  5301b868a4d1743e3f4205078b85169a041cb9abff82d83372455d756025c748
+```
+
+Remember this hash? We included it in the `contentInfo` section. Please go back and verify it.
+
+At the beginning of this document, we calculated the digest of `notepad.exe`. Let’s recalculate the digest, but this time using the Python script:
+
+```shell
+$ python3 pe_image_hash_calculator.py C:\Windows\notepad.exe
+MD5:     63eac033a423f6fd4f3b175853f0834c
+SHA1:    bc43d65cc41670fbb1e1a686ae62bff3f9aa784a
+SHA256:  7d427408e8005b6ebae1a5f732a1f6693aa02659a1b0defc13a5b6e8a4b96721
 ```
 
 # Appendix C: Most Important Fields of PKCS7
