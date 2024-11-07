@@ -1119,7 +1119,7 @@ The subsequent numbers are encoded in base 128 with the high bit set for all but
 
 ### SEQUENCE
 
-Represents a sequence of ordered elements, similar to a struct in programming languages. It is a constructed type, meaning it contains other ASN.1 types.
+Represents a sequence of ordered elements, similar to a struct in programming languages. It is a constructed type, meaning it contains other ASN.1 types. The term *SEQUENCE* in ASN.1 is equivalent to a *struct* in C++.
 
 Example:
 ```ASN.1
@@ -1174,7 +1174,7 @@ weight = 65
 
 DER Encoding:
 ```
-31 06 02 02 00 AA 02 01 41
+31 07 02 02 00 AA 02 01 41
 ```
 
 <details>
@@ -1195,6 +1195,8 @@ Content:
 
  - `SEQUENCE OF` represents an ordered collection of elements, where the order of elements matters and is preserved in the encoding.
  - The type of all elements within the sequence must be the same.
+
+The term *SEQUENCE OF* in ASN.1 is equivalent to a *vector* in C++.
 
 Example:
 ```ASN.1
@@ -1234,7 +1236,7 @@ UniqueIds SET OF INTEGER ::= {5, 100, 20}
 
 DER Encoding:
 ```
-31 07 02 01 05 02 01 14 02 01 64
+31 09 02 01 05 02 01 14 02 01 64
 ```
 
 <details>
@@ -1242,7 +1244,7 @@ DER Encoding:
 
 ```
 Tag:        0x31 (SET)
-Length:     0x07
+Length:     0x09
 Content:
     -- First INTEGER (5)
     02 01 05
