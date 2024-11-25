@@ -15,46 +15,7 @@
 //------------------------------------------------
 RequiresVersion( 14 );
 
-// ASN.1 Parser Template for 010 Editor
-// Parses basic DER-encoded ASN.1 structures
-
-// Define ASN.1 tags
-const uchar ASN1_INTEGER = 0x02;
-const uchar ASN1_OCTET_STRING = 0x04;
-const uchar ASN1_NULL = 0x05;
-const uchar ASN1_OBJECT_IDENTIFIER = 0x06;
-const uchar ASN1_SEQUENCE = 0x30;
-
-
-
-
-typedef struct(long& actualLength) {    
-    BYTE tag       <format=hex>;      // Tag identifying the ASN.1 type
-    uchar length    <format=hex>;           // Length of the data field      
-    if (length <= 0x7f) {
-        actualLength = length;
-    }
-    else
-    {
-        local uchar lengthByteCount = length & 0x7F;        
-        local int i;
-        
-        uchar actualLengthByte[lengthByteCount];        
-            
-        for (i = 0; i < lengthByteCount; i++) {
-            actualLength = (actualLength << 8) | actualLengthByte[i];
-        }           
-    }
-} ASN1_Header;
-
-
-typedef struct {    
-    local long actualLength = 0;
-    ASN1_Header header(actualLength);
-    if(actualLength != 0)
-        uchar value[actualLength];
-} ASN1_Element;
-
+#include "ASN1.bt" 
 
 int8 check_tag(uchar expected_tag) 
 {
