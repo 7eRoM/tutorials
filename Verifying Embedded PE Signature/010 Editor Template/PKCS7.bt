@@ -1,0 +1,182 @@
+//------------------------------------------------
+//--- 010 Editor v15.0.1 PKCS7 Template
+//
+//      File: PKCS7.bt
+//   Authors: 7eRoM
+//   Version: 1.0
+//   Purpose: Parsing a signedData of PKCS7
+//  Category: Executable
+// File Mask: *.exe,*.dll,*.sys
+//   History: 
+//   1.0     2024-11-22 First Release.
+//
+// Recommended reading:
+// https://github.com/7eRoM/tutorials/tree/main/Verifying%20Embedded%20PE%20Signature
+//------------------------------------------------
+RequiresVersion( 14 );
+
+#include "ASN1.bt" 
+
+int8 check_tag(uchar expected_tag) 
+{
+    local int originalPos = FTell();
+    local int8 result = 0;
+
+    uchar found_tag <hidden=true>;
+    if(found_tag == expected_tag)
+        result = 1;
+
+    FSeek(originalPos);
+    return result;
+}
+
+typedef struct 
+{
+    local long actualLength = 0;
+    ASN1_Header tag(actualLength);
+    ASN1_Element digestAlgorithm;
+    ASN1_Element digest;
+} DigestInfo;
+
+typedef struct 
+{
+    local long actualLength = 0;
+    ASN1_Header optionalTag(actualLength);
+    ASN1_Header tag(actualLength);
+    ASN1_Element data;
+    DigestInfo  messageDigest;
+} SpcIndirectDataContent;
+
+typedef struct 
+{
+    local long actualLength = 0;
+    ASN1_Header tag(actualLength) <bgcolor=cDkBlue, fgcolor=cWhite, format=hex>;
+    ASN1_Element contentType <bgcolor=cBlue, fgcolor=cWhite, format=hex>;
+    SpcIndirectDataContent content <bgcolor=cLtBlue, fgcolor=cWhite, format=hex>;
+    
+    local int i = 0;
+    Printf("\nPE Image Hash: ");
+    for(i=0; i < content.messageDigest.digest.actualLength; i++)   
+        Printf("%02X", content.messageDigest.digest.value[i]);
+    Printf("\n");
+} Content_Info;
+
+typedef struct 
+{       
+    local long actualLength = 0;
+    ASN1_Header tag(actualLength);
+    if(check_tag(0xA0))
+        ASN1_Element version;
+    ASN1_Element serialNumber;
+    ASN1_Element signature;
+    ASN1_Element issuer;
+    ASN1_Element validity;
+    ASN1_Element subject;
+    ASN1_Element subjectPublicKeyInfo;
+    if(check_tag(0xA1))
+        ASN1_Element issuerUniqueID;
+    if(check_tag(0xA2))
+        ASN1_Element subjectUniqueID;
+    if(check_tag(0xA3))
+        ASN1_Element extensions;
+    
+    local int i = 0;
+    Printf("Serial Number: ");
+    for(i=0; i < serialNumber.actualLength; i++)   
+        Printf("%02X ", serialNumber.value[i]);
+    Printf("\n");
+
+} TBSCertificate;
+
+typedef struct 
+{       
+    local long actualLength = 0;
+    ASN1_Header tag(actualLength);
+    TBSCertificate tbsCertificate;
+    ASN1_Element signatureAlgorithm;
+    ASN1_Element signatureValue;   
+} Certificate;
+
+typedef struct 
+{       
+    local long optionalActualLengt = 0;
+    ASN1_Header optional_tag(optionalActualLengt) <bgcolor=cDkGreen, fgcolor=cWhite, format=hex>;
+
+    local long actualLength = 0;
+    local long startingThumbprintOffset = 0; 
+    local uchar result[];
+    local int i = 1;
+    while ((FTell() < optionalActualLengt))
+    {  
+        Printf("\n=== Certificate #%d === \n", i++);  
+        startingThumbprintOffset = FTell();   
+        Certificate certificate <bgcolor=cGreen, fgcolor=cWhite, format=hex>;         
+        if (ChecksumAlgStr(CHECKSUM_SHA1, result, startingThumbprintOffset, FTell() - startingThumbprintOffset) != -1)
+            Printf("Thumbprint: %s\n", result);
+    }
+} Certificates;
+
+typedef struct 
+{
+    local long actualLength = 0;
+    ASN1_Header tag(actualLength);
+    ASN1_Element issuer; 
+    ASN1_Element serialNumber;
+} IssuerAndSerialNumber;
+
+typedef struct 
+{
+    local long actualLength = 0;
+    ASN1_Header tag(actualLength);
+    ASN1_Element algorithm; 
+    ASN1_Element parameters;
+} DigestAlgorithm;
+
+typedef struct 
+{
+    local long actualLength = 0;
+    ASN1_Header tag(actualLength);
+    ASN1_Element algorithm; 
+    ASN1_Element parameters;
+} DigestEncryptionAlgorithm;
+
+typedef struct 
+{
+    local long actualLength = 0;
+    ASN1_Header tag(actualLength) <bgcolor=cDkYellow, fgcolor=cWhite, format=hex>;
+    ASN1_Element version <bgcolor=cYellow, fgcolor=cWhite, format=hex>;
+    IssuerAndSerialNumber issuerAndSerialNumber <bgcolor=cLtYellow, fgcolor=cWhite, format=hex>;
+    DigestAlgorithm digestAlgorithm <bgcolor=cYellow, fgcolor=cWhite, format=hex>;
+    if(check_tag(0xA0))
+        ASN1_Element authenticatedAttributes <bgcolor=cLtYellow, fgcolor=cWhite, format=hex>;
+    ASN1_Element digestEncryptionAlgorithm <bgcolor=cYellow, fgcolor=cWhite, format=hex>;
+    ASN1_Element encryptedDigest <bgcolor=cLtYellow, fgcolor=cWhite, format=hex>;
+    if(check_tag(0xA1))
+        ASN1_Element unauthenticatedAttributes <bgcolor=cYellow, fgcolor=cWhite, format=hex>;
+} SignerInfo;
+
+typedef struct 
+{       
+    local long optionalActualLengt = 0;
+    ASN1_Header tag(optionalActualLengt) <bgcolor=cDkGreen, fgcolor=cWhite, format=hex>;
+
+    while ((FTell() < optionalActualLengt))   
+        SignerInfo signerInfo <bgcolor=cGreen, fgcolor=cWhite, format=hex>;         
+} SignerInfos;
+
+local long actualLength = 0;
+ASN1_Header ContentInfo(actualLength) <bgcolor=cLtGray, fgcolor=cWhite, format=hex>;
+ASN1_Element contentType <bgcolor=cGray, fgcolor=cWhite, format=hex>;
+ASN1_Header content(actualLength) <bgcolor=cLtGray, fgcolor=cWhite, format=hex, comment="Optional Tag">;
+ASN1_Header content(actualLength) <bgcolor=cLtGray, fgcolor=cWhite, format=hex>;
+ASN1_Element Version <bgcolor=cGray, fgcolor=cWhite, format=hex>;
+ASN1_Element digestAlgorithms <bgcolor=cLtGray, fgcolor=cWhite, format=hex>;
+Content_Info contentInfo;
+if(check_tag(0xA0))
+    Certificates certificates;
+if(check_tag(0xA1))
+    ASN1_Element crls <bgcolor=cPurple, fgcolor=cWhite, format=hex>;
+SignerInfos signerInfos;
+
+
+
