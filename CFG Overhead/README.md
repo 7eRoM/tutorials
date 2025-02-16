@@ -1,5 +1,7 @@
 # CFG Overhead
 
+![CFG-indirect-call](CFG-indirect-call.jpg)
+
 ## Introduction
 We aim to calculate the overhead of enabling Control Flow Guard (CFG) for a project in Windows. If you are already familiar with CFG in Windows, you can skip this section. Otherwise, you can read more about it in the book "Windows Internals" 7th Edition or other articles like [Exploring Control Flow Guard in Windows 10](http://sjc1-te-ftp.trendmicro.com/assets/wp/exploring-control-flow-guard-in-windows10.pdf).
 
