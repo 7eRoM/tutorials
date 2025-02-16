@@ -78,5 +78,14 @@ I ran the code in **x64-Release** mode on a system with the following specificat
 
 With **CFG disabled**, the execution time was approximately **1.4 seconds**. With **CFG enabled**, the execution time increased to approximately **2.4 seconds**.
 
-## Note
+## Project Configuration
+You must enable Control Flow Guard (CFG) both at compile-time and link-time.
+ - **Compile Time**: Configuration Properties > C/C++ > Code Generation > Control Flow Guard: **Yes (/guard:cf)**
+ - **Link TIme**: Configuration Properties > Linker > Command Line > Additional Options: **/GUARD:CF**
+
+## Important Note
 The calculated overhead indicates an overhead of around 70%. However, it is important to note that the entire sample code consists of indirect calls. In your case, a small percentage of your code might be indirect calls, while the majority of your code could be CPU-bound or I/O-bound. Therefore, the overhead of your code would be approximately 70% of the time consumed by indirect calls, relative to the total execution time of the process.
+
+## Linkes
+ - https://learn.microsoft.com/en-us/cpp/build/reference/guard-enable-control-flow-guard?view=msvc-170
+ - https://learn.microsoft.com/en-us/cpp/build/reference/guard-enable-guard-checks?view=msvc-170
