@@ -4,7 +4,7 @@ A collection of detailed insights, guidelines, and technical information regardi
 
 Kindly let me know if any of the information I provided is incorrect.
 
-## Some of mini-filter context types
+## ✅ Some of mini-filter context types
 
 | Level | What it logically represents | Key structure / pointer |
 |---|---|---|
