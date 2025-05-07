@@ -28,3 +28,13 @@ report.txt                        ← File
  * Both FO‑A and FO‑B share the same `STREAM_CONTEXT` because their `FsContext` is identical.
  * FO‑C gets its own, separate `STREAM_CONTEXT` (different `FsContext`).
  * One optional `FILE_CONTEXT` can cover all three handles because they belong to the same directory entry.
+
+## ✅ `PsGetCurrentProcessId` vs `FltGetRequestorProcessId`
+
+ * **FltGetRequestorProcessId**: Given the `PFLT_CALLBACK_DATA` of an I/O request in a minifilter driver, it returns the PID of the process that issued that request (even if your minifilter code is running in a system worker‑thread).
+
+ * **PsGetCurrentProcessId**: Kernel‑mode helper that simply returns the PID of the process in which the current thread is running.
+
+You msst **NOT** use `PsGetCurrentProcessId` in mini-filter to get the PID! Pay attention to these scenaros:
+ - If you use `PsGetCurrentProcessId` inside a minifilter callback to identify who sent the I/O request, you may get the wrong PID, because the callback often runs in a system‑worker thread that belongs to the System process (PID 4) rather than in the original caller’s thread.
+ - A user process (PID 1234) issues a `CreateFile` request that your minifilter defers by returning `FLT_PREOP_PENDING` and queuing a `FLT_WORKITEM`. The Filter Manager later runs that work‑item on a kernel worker thread owned by the System process (PID 4). Inside the work‑item, `PsGetCurrentProcessId` reports 4 because it reflects the process of the running thread, not the originator.
